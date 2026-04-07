@@ -1,0 +1,61 @@
+################################################################################
+# Amber Auth on Startup
+################################################################################
+#
+#   Runs amber_auth.py on HA startup to cache the Amber Cognito token.
+#   Token is valid for 1 hour and auto-refreshes via amber_graphql.py.
+#
+# How it works:
+#   HA starts → amber_auth.py authenticates with Amber's AWS Cognito service
+#   → fetches site ID and battery config ID → saves to amber_token_cache.json
+#   → on failure sends a notification alert
+#
+# Enable / Disable:
+#   This automation is ALWAYS ON by default (no enable boolean).
+#   It is a core dependency - auth must run on startup for all other
+#   automations to work. Disable from Settings → Automations only if you
+#   are intentionally taking the integration offline.
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → shell_command.amber_auth
+#   → notify.notification  (configured in configuration.yaml)
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-03-27    Kane Li    - Initial version
+#   v1.1    2026-04-07    Kane Li    - Changed notify.email to notify.notification
+#                                      Updated comments and documentation
+################################################################################
+
+- id: amber_auth_startup
+  alias: Amber Auth on Startup
+  trace:
+    stored_traces: 20
+  description: >
+    Runs amber_auth.py on HA startup to cache the Amber Cognito token.
+    Token is valid for 1 hour and auto-refreshes via amber_graphql.py.
+    Always-on automation - core dependency for all other integrations.
+  trigger:
+    - platform: homeassistant
+      event: start
+  action:
+    - service: shell_command.amber_auth
+      response_variable: auth_result
+    - if:
+        - condition: template
+          value_template: "{{ auth_result.returncode != 0 }}"
+      then:
+        # Sends via whichever notification platform is configured as
+        # notify.notification in configuration.yaml (e.g. email, mobile app, etc.)
+        - service: notify.notification
+          data:
+            title: "Amber Auth Failed on Startup"
+            message: >
+              Failed to authenticate with Amber on startup.
+              Run python3 /config/scripts/amber_auth.py in Terminal to debug.
+              Return code: {{ auth_result.returncode }}
+              stdout: {{ auth_result.stdout }}
+              stderr: {{ auth_result.stderr }}

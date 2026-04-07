@@ -1,0 +1,120 @@
+################################################################################
+# Amber Negative Price Notification
+################################################################################
+#
+#   Monitors the Amber buy price and sends notifications when the price
+#   goes negative (grid paying you to consume) or returns to positive.
+#
+# How it works:
+#   Confirmed Amber buy price updates (via amber_price_poll)
+#       ↓
+#   Automation enabled? (input_boolean.amber_enable_negative_price_notify)
+#       ↓ No  → do nothing
+#       ↓ Yes
+#   Within amber_charge_on_negative_start and amber_charge_on_negative_end?
+#       ↓ Yes
+#   Price just gone negative?  → send "Gone Negative" notification
+#   Price returned positive?   → send "Back to Positive" notification
+#   No change in direction     → do nothing
+#
+# Enable / Disable:
+#   Controlled by input_boolean.amber_enable_negative_price_notify (default OFF).
+#   This boolean is checked as a condition inside the automation so that
+#   the OFF state survives HA restarts without relying on HA's built-in
+#   enabled/disabled state (which resets on restart in some configurations).
+#   Toggle from Settings → Helpers or add to a dashboard card.
+#
+#-------------------------------------------------------------------------------
+# Configuration - configuration.yaml
+#-------------------------------------------------------------------------------
+#   → input_number.amber_last_notified_price
+#   → input_datetime.amber_charge_on_negative_start (default 10:00)
+#   → input_datetime.amber_charge_on_negative_end (default 17:00)
+#   → input_boolean.amber_enable_negative_price_notify (default off)
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → input_number.amber_general_price_actual
+#   → input_number.amber_last_notified_price
+#   → input_boolean.amber_enable_negative_price_notify
+#   → notify.notification  (configured in configuration.yaml)
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-03-27    Kane Li    - Initial version
+#   v1.1    2026-04-01    Kane Li    - Renamed amber_curtailment_start/end to
+#                                      amber_charge_on_negative_start/end
+#   v1.2    2026-04-07    Kane Li    - Added input_boolean.amber_enable_negative_price_notify
+#                                      condition so automation can be toggled on/off
+#                                      from the HA GUI without relying on HA's
+#                                      built-in enabled state (survives restarts)
+#                                      Default state: OFF
+#                                      Changed notify.email to notify.notification
+################################################################################
+
+- id: amber_negative_price_notify
+  alias: Amber Negative Price Notification
+  trace:
+    stored_traces: 20
+  description: >
+    Notifies when Amber buy price goes negative and when it returns positive.
+    Only active within the configured time window.
+    Controlled by input_boolean.amber_enable_negative_price_notify (default OFF).
+  trigger:
+    - platform: state
+      entity_id: input_number.amber_general_price_actual
+  condition:
+    # Gate: only proceed if this automation has been enabled by the user.
+    # input_boolean.amber_enable_negative_price_notify defaults to OFF so this
+    # automation is inert until explicitly turned on from Settings → Helpers.
+    - condition: state
+      entity_id: input_boolean.amber_enable_negative_price_notify
+      state: "on"
+    - condition: template
+      value_template: "{{ states('input_number.amber_general_price_actual') not in ['unknown', 'unavailable'] }}"
+    - condition: template
+      value_template: >
+        {{ now().strftime('%H:%M:%S') >= states('input_datetime.amber_charge_on_negative_start')[0:8]
+           and now().strftime('%H:%M:%S') < states('input_datetime.amber_charge_on_negative_end')[0:8] }}
+  action:
+    - variables:
+        current_price: "{{ states('input_number.amber_general_price_actual') | float(0) }}"
+        last_notified: "{{ states('input_number.amber_last_notified_price') | float(0) }}"
+    - choose:
+        # Price returned to positive
+        - conditions:
+            - condition: template
+              value_template: "{{ current_price >= 0 and last_notified < 0 }}"
+          sequence:
+            # Sends via whichever notification platform is configured as
+            # notify.notification in configuration.yaml
+            - service: notify.notification
+              data:
+                title: "Amber Price Back to Positive"
+                message: >
+                  Price is now {{ (current_price * 100) | round(0) | int }}c/kWh.
+                  Previous negative price was {{ (last_notified * 100) | round(0) | int }}c/kWh.
+            - service: input_number.set_value
+              target:
+                entity_id: input_number.amber_last_notified_price
+              data:
+                value: 0
+
+        # Price just gone negative
+        - conditions:
+            - condition: template
+              value_template: "{{ current_price < 0 and last_notified >= 0 }}"
+          sequence:
+            - service: notify.notification
+              data:
+                title: "Amber Buy Price Gone Negative!"
+                message: >
+                  Buy price is now {{ (current_price * 100) | round(0) | int }}c/kWh.
+                  Grid is paying you to consume electricity.
+            - service: input_number.set_value
+              target:
+                entity_id: input_number.amber_last_notified_price
+              data:
+                value: "{{ current_price }}"

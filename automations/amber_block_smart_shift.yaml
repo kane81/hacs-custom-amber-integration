@@ -1,0 +1,192 @@
+################################################################################
+# Amber Block Smart Shift Overnight
+################################################################################
+#
+#   Disables Smart Shift via the Amber API for the entire configured overnight
+#   window. Re-enables Smart Shift when the window ends.
+#
+#   This is a blanket block - Smart Shift is disabled for the full window
+#   regardless of sell price. Use this to prevent overnight charging when
+#   you want to preserve battery capacity for the next day.
+#
+# How it works:
+#   Window start time fires (default 23:30)
+#       ↓
+#   Automation enabled? (input_boolean.amber_enable_block_smart_shift)
+#       ↓ No  → do nothing (safe exit - no API calls made)
+#       ↓ Yes
+#   Call amber_graphql.py smartshift_off + set flag + notify
+#       ↓
+#   Window end time fires (default 06:00)
+#       ↓
+#   Call amber_graphql.py smartshift_on + clear flag + notify
+#
+# Enable / Disable:
+#   Controlled by input_boolean.amber_enable_block_smart_shift (default OFF).
+#   This boolean is checked as a condition inside the automation so that
+#   the OFF state survives HA restarts without relying on HA's built-in
+#   enabled/disabled state (which resets on restart in some configurations).
+#   Toggle from Settings → Helpers or add to a dashboard card.
+#
+#   CLEANUP ON DISABLE: If the automation is disabled while a block is active
+#   (amber_block_smart_shift_active = on), Smart Shift is automatically
+#   re-enabled via the Amber API and the flag is cleared. This ensures the
+#   Amber API is always restored to a known good state when you disable.
+#
+# Overnight Window Logic:
+#   If start > end (e.g. 23:30 → 06:00) the window spans midnight.
+#   The flag amber_block_smart_shift_active tracks whether THIS automation
+#   disabled Smart Shift, so the window_end restore only fires if the block
+#   is actually active.
+#
+#-------------------------------------------------------------------------------
+# Configuration - configuration.yaml
+#-------------------------------------------------------------------------------
+#   → input_datetime.amber_block_smart_shift_start (default 23:30)
+#   → input_datetime.amber_block_smart_shift_end (default 06:00)
+#   → input_boolean.amber_enable_block_smart_shift (default off)
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → shell_command.amber_smartshift_off
+#   → shell_command.amber_smartshift_on
+#   → input_boolean.amber_block_smart_shift_active
+#   → input_boolean.amber_enable_block_smart_shift
+#   → notify.notification  (configured in configuration.yaml)
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-03-28    Kane Li    - Initial version
+#   v1.1    2026-04-07    Kane Li    - Added enable boolean condition
+#                                      Changed notify.email to notify.notification
+#   v1.2    2026-04-08    Kane Li    - Added cleanup trigger: when automation is
+#                                      disabled mid-session, re-enables Smart Shift
+#                                      and clears the active flag automatically
+################################################################################
+
+- id: amber_block_smart_shift
+  alias: Amber Block Smart Shift Overnight
+  trace:
+    stored_traces: 20
+  description: >
+    Disables Smart Shift at window start and re-enables at window end.
+    Blanket block for the full overnight window - no price threshold.
+    Controlled by input_boolean.amber_enable_block_smart_shift (default OFF).
+    Cleans up automatically if disabled mid-session.
+  trigger:
+    - platform: time
+      at: input_datetime.amber_block_smart_shift_start
+      id: window_start
+    - platform: time
+      at: input_datetime.amber_block_smart_shift_end
+      id: window_end
+    # Cleanup trigger: fires when the enable boolean is turned OFF mid-session
+    # so Smart Shift is restored even if the user disables the automation
+    # while the overnight block is active.
+    - platform: state
+      entity_id: input_boolean.amber_enable_block_smart_shift
+      to: "off"
+      id: disabled
+  action:
+    - choose:
+        # Automation was disabled mid-session - restore Smart Shift if block was active
+        - conditions:
+            - condition: trigger
+              id: disabled
+            - condition: state
+              entity_id: input_boolean.amber_block_smart_shift_active
+              state: "on"
+          sequence:
+            - service: shell_command.amber_smartshift_on
+              response_variable: cmd_result
+            - if:
+                - condition: template
+                  value_template: "{{ cmd_result.returncode == 0 }}"
+              then:
+                - service: input_boolean.turn_off
+                  target:
+                    entity_id: input_boolean.amber_block_smart_shift_active
+                - service: notify.notification
+                  data:
+                    title: "Smart Shift Re-enabled - Block Smart Shift Disabled"
+                    message: >
+                      Block Smart Shift automation was disabled while the overnight
+                      block was active. Smart Shift has been re-enabled via Amber API.
+              else:
+                - service: notify.notification
+                  data:
+                    title: "Smart Shift Re-enable Failed"
+                    message: >
+                      Block Smart Shift automation was disabled but failed to
+                      re-enable Smart Shift via Amber API.
+                      Return code: {{ cmd_result.returncode }}
+                      Run: python3 /config/scripts/amber_graphql.py smartshift_on
+
+        # Window started - disable Smart Shift (only if automation is enabled)
+        - conditions:
+            - condition: trigger
+              id: window_start
+            - condition: state
+              entity_id: input_boolean.amber_enable_block_smart_shift
+              state: "on"
+          sequence:
+            - service: shell_command.amber_smartshift_off
+              response_variable: cmd_result
+            - if:
+                - condition: template
+                  value_template: "{{ cmd_result.returncode == 0 }}"
+              then:
+                - service: input_boolean.turn_on
+                  target:
+                    entity_id: input_boolean.amber_block_smart_shift_active
+                - service: notify.notification
+                  data:
+                    title: "Smart Shift Disabled - Overnight Block Started"
+                    message: >
+                      Overnight window started. Smart Shift disabled via Amber API.
+                      Battery will not charge overnight.
+                      Smart Shift will be re-enabled at window end.
+              else:
+                - service: notify.notification
+                  data:
+                    title: "Smart Shift Disable Failed"
+                    message: >
+                      Failed to disable Smart Shift at window start.
+                      Return code: {{ cmd_result.returncode }}
+                      stdout: {{ cmd_result.stdout }}
+                      stderr: {{ cmd_result.stderr }}
+
+        # Window ended - re-enable Smart Shift if block was active
+        - conditions:
+            - condition: trigger
+              id: window_end
+            - condition: state
+              entity_id: input_boolean.amber_block_smart_shift_active
+              state: "on"
+          sequence:
+            - service: shell_command.amber_smartshift_on
+              response_variable: cmd_result
+            - if:
+                - condition: template
+                  value_template: "{{ cmd_result.returncode == 0 }}"
+              then:
+                - service: input_boolean.turn_off
+                  target:
+                    entity_id: input_boolean.amber_block_smart_shift_active
+                - service: notify.notification
+                  data:
+                    title: "Smart Shift Re-enabled - Overnight Block Ended"
+                    message: >
+                      Overnight window ended. Smart Shift re-enabled via Amber API.
+                      Battery free to charge normally.
+              else:
+                - service: notify.notification
+                  data:
+                    title: "Smart Shift Re-enable Failed"
+                    message: >
+                      Failed to re-enable Smart Shift at window end.
+                      Return code: {{ cmd_result.returncode }}
+                      stdout: {{ cmd_result.stdout }}
+                      stderr: {{ cmd_result.stderr }}
