@@ -109,49 +109,102 @@ All optional automations are **off by default** — enable them individually fro
 
 ## Installation
 
+### Step 0 — Install Required Add-ons
+
+Before starting you need two add-ons from the **official Home Assistant Add-on Store** — no HACS or third-party repositories required.
+
+Open: **Settings → Add-ons → Add-on Store**
+
+#### Studio Code Server — file editor
+
+Used to edit `configuration.yaml` and `secrets.yaml` directly in your browser. Required for Steps 2 and 3.
+
+1. Search for `Studio Code Server` → **Install**
+2. Go to the **Info** tab → **Start**
+3. Toggle **Show in sidebar** to on
+
+#### Terminal & SSH — command line
+
+Used to install pycognito and test authentication. Required for Steps 4 and 5.
+
+1. Search for `Terminal & SSH` → **Install**
+2. Go to the **Configuration** tab → click **Show unused optional configuration options** → expand **ssh** → set a username and password — **this is required or the add-on will not start**
+3. Go to the **Info** tab → **Start**
+4. Toggle **Show in sidebar** to on
+
+#### Verify Python 3
+
+Open **Terminal & SSH** from the sidebar and run:
+
+```bash
+python3 --version
+```
+
+If you see `command not found` run:
+
+```bash
+apk add python3
+```
+
+---
+
 ### Step 1 — Add via HACS
 
 1. Open **HACS** in your HA sidebar
 2. Click **⋮** (top right) → **Custom repositories**
 3. Paste: `https://github.com/kane81/hacs-custom-amber-integration`
 4. Category: **Integration** → **Add**
-5. Search for **Amber Electric Smart Shift** → **Download**
+5. Search for **hacs-custom-amber-integration** → **Download**
 
-HACS will copy all files into `/config/` automatically.
+HACS will copy all files into `/config/` automatically — automations, scripts, templates and the `packages/` folder.
+
+---
 
 ### Step 2 — Enable the Package
 
-Add this to your `/config/configuration.yaml` under the `homeassistant:` key:
+Open **Studio Code Server** from the sidebar. In the file explorer on the left, navigate to and open `/config/configuration.yaml`.
+
+Add the following under the `homeassistant:` key:
 
 ```yaml
 homeassistant:
   packages: !include_dir_named packages/
 ```
 
-> If you already have a `homeassistant:` section, add the `packages:` line under it. If you don't have one, add both lines.
+> If you already have a `homeassistant:` section, add just the `packages:` line underneath it. If you don't have a `homeassistant:` section at all, add both lines.
 
-Then reload: **Developer Tools → YAML → Reload All**
+Save the file with **Ctrl+S**, then reload:
 
-This single line loads all helpers, shell commands and notification config automatically — no further YAML editing required.
+**Developer Tools → YAML → Reload All**
+
+This single line loads all helpers, shell commands and notification config automatically — no further YAML editing required for the integration to function.
+
+---
 
 ### Step 3 — Add Credentials
 
-Open `/config/secrets.yaml` and add:
+Still in **Studio Code Server**, open `/config/secrets.yaml` from the file explorer.
+
+Add the following lines:
 
 ```yaml
 amber_email: "your@email.com"
 amber_password: "your-amber-password"
-ha_token: "your-long-lived-access-token"
+ha_long_lived_token: "your-long-lived-access-token"
 
 # Optional — only needed if adding email notifications
 smtp_username: "your@gmail.com"
 smtp_password: "your-app-password"
 ```
 
+Save the file with **Ctrl+S**.
+
 **Getting your HA long-lived access token:**
 1. Click your profile avatar (bottom left sidebar)
 2. Scroll to **Long-Lived Access Tokens** → **Create Token**
 3. Name it `amber_smartshift` — copy it immediately, it will not be shown again
+
+---
 
 ### Step 4 — Install pycognito
 
@@ -161,7 +214,13 @@ Open **Terminal & SSH** from the sidebar and run:
 pip3 install pycognito --break-system-packages
 ```
 
+This installs the Python library used to authenticate with Amber's AWS Cognito service. It only needs to be run once.
+
+---
+
 ### Step 5 — Test Authentication
+
+Still in Terminal, run:
 
 ```bash
 python3 /config/scripts/amber_auth.py
@@ -176,15 +235,32 @@ Config ID: 01K...
 Token cached successfully
 ```
 
+If you see an error, double-check `amber_email` and `amber_password` in `secrets.yaml` match what you use to log into the Amber app.
+
+Then test a live price poll:
+
+```bash
+python3 /config/scripts/amber_graphql.py live
+```
+
+Expected output:
+```
+Buy:    28.5c/kWh
+Sell:   5.2c/kWh
+HA updated. Last polled: 2026-04-08 10:30:00
+```
+
+---
+
 ### Step 6 — Restart HA
 
 **Settings → System → Restart**
 
 After restart the two core automations run automatically:
-- **Amber Auth on Startup** — authenticates on every HA restart
+- **Amber Auth on Startup** — authenticates with Amber on every HA restart
 - **Amber Price Poller** — polls prices every 5 minutes
 
-Check they are listed under **Settings → Automations**.
+Confirm they are listed and active under **Settings → Automations**.
 
 ---
 
@@ -199,11 +275,25 @@ Optional automations are **off by default**. Enable them via **Settings → Help
 | `amber_enable_force_export_custom_fit` | Force Export at Custom FiT | OFF |
 | `amber_enable_negative_price_notify` | Negative Price Notification | OFF |
 
+To toggle: go to **Settings → Helpers**, find the helper by name and click the toggle.
+
 ---
 
 ## Configuration
 
-All settings adjustable via **Settings → Helpers** — no YAML editing required.
+All settings can be changed without editing any YAML files.
+
+### Option A — Overview → Devices & Services (recommended)
+
+1. Go to your **Overview** dashboard
+2. Click **Devices & Services** (top right button)
+3. Select the **Helpers** tab
+4. Search for the helper you want to change (e.g. `amber_min_sell_price`)
+5. Click it and update the value — changes take effect immediately, no restart needed
+
+### Option B — Settings → Helpers
+
+Go to **Settings → Helpers**, find the helper by name and click it to edit.
 
 ### Time Windows
 
@@ -222,6 +312,8 @@ All settings adjustable via **Settings → Helpers** — no YAML editing require
 |---|---|---|
 | `amber_min_sell_price` | $0.15/kWh | Minimum sell price to trigger force export |
 | `amber_min_soc_to_sell` | 10% | Minimum battery SOC before stopping export |
+
+> Changes to thresholds take effect immediately — no need to wait for the next price poll.
 
 ---
 
