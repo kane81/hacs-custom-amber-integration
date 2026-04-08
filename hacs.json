@@ -1,6 +1,5 @@
 {
-  "name": "hacs-custom-amber-integration",
-  "content_in_root": true,
+  "name": "Home Assistant Custom Amber Electric Integration",
   "render_readme": true,
   "domains": ["automation", "input_number", "input_boolean", "input_datetime", "notify"],
   "homeassistant": "2024.1.0",
