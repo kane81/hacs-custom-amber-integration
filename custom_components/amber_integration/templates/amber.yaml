@@ -1,0 +1,52 @@
+################################################################################
+# Amber Template Sensors
+################################################################################
+#
+#   Creates HA template sensors that expose Amber prices in cents rather than
+#   dollars. Useful for energy dashboard integrations, Lovelace cards, and
+#   automations that work in whole cents.
+#
+#   The raw input_number helpers store prices in $/kWh (e.g. 0.285).
+#   These template sensors convert to c/kWh (e.g. 29c/kWh).
+#
+# Sensors created:
+#   sensor.amber_buy_price   - buy price in c/kWh (rounded)
+#   sensor.amber_sell_price  - effective sell price in c/kWh (absolute value)
+#
+# Note on sell price:
+#   The sell price sensor shows the absolute value for display purposes.
+#   A negative sell price means you are paying to export - check
+#   input_number.amber_feed_in_price_actual directly if you need the sign.
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → input_number.amber_general_price_actual
+#   → input_number.amber_feed_in_price_actual
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-03-27    Kane Li    - Initial version
+################################################################################
+
+- sensor:
+
+    # Amber buy price in cents per kWh
+    # e.g. 0.285 $/kWh → 29 c/kWh
+    - name: "Amber Buy Price"
+      unique_id: amber_buy_price
+      state: >
+        {{ (states('input_number.amber_general_price_actual') | float(0) * 100) | round(0) }}
+      unit_of_measurement: "c/kWh"
+      icon: mdi:lightning-bolt
+
+    # Amber effective sell price in cents per kWh (absolute value)
+    # Includes tariff bonuses e.g. 12c 6-9pm bonus
+    # e.g. 0.17 $/kWh → 17 c/kWh
+    - name: "Amber Sell Price"
+      unique_id: amber_sell_price
+      state: >
+        {{ ((states('input_number.amber_feed_in_price_actual') | float(0) * 100) | abs) | round(0) }}
+      unit_of_measurement: "c/kWh"
+      icon: mdi:solar-power

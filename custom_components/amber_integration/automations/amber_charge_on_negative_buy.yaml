@@ -1,0 +1,215 @@
+################################################################################
+# Amber Charge from Grid on Negative Buy Price
+################################################################################
+#
+#   When the Amber buy price goes negative (grid is paying you to consume),
+#   forces the battery to charge from the grid via the Amber Smart Shift API.
+#
+# How it works:
+#   amber_last_polled updates (every 5 min guaranteed)
+#       ↓
+#   Automation enabled? (input_boolean.amber_enable_charge_on_negative_buy)
+#       ↓ No  → do nothing
+#       ↓ Yes
+#   Buy price negative AND flag off → START: call charge 60 + set flag + notify
+#   Buy price negative AND flag on  → MAINTAIN: re-issue charge 60 (silent)
+#       ↓
+#   Buy price returns positive AND flag on → STOP: cancel override + notify
+#   Window end fires AND flag on           → STOP: cancel override + notify
+#   Automation disabled AND flag on        → STOP: cancel override + notify
+#
+# Enable / Disable:
+#   Controlled by input_boolean.amber_enable_charge_on_negative_buy (default OFF).
+#   CLEANUP ON DISABLE: If disabled while charging is active, the charge
+#   override is cancelled and the flag cleared automatically.
+#
+#-------------------------------------------------------------------------------
+# Configuration - configuration.yaml
+#-------------------------------------------------------------------------------
+#   → input_datetime.amber_charge_on_negative_start (default 10:00)
+#   → input_datetime.amber_charge_on_negative_end (default 17:00)
+#   → input_boolean.amber_enable_charge_on_negative_buy (default off)
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → input_number.amber_general_price_actual
+#   → shell_command.amber_force_charge
+#   → shell_command.amber_cancel_override
+#   → shell_command.amber_smartshift_on
+#   → input_boolean.amber_grid_charging_active
+#   → input_boolean.amber_enable_charge_on_negative_buy
+#   → notify.notification  (configured in configuration.yaml)
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-03-27    Kane Li    - Initial version
+#   v1.1    2026-03-28    Kane Li    - Reduced duration to 60 min
+#                                      Switched trigger to amber_last_polled
+#   v1.2    2026-03-31    Kane Li    - Added state tracking
+#                                      Split into START / MAINTAIN / STOP branches
+#   v1.3    2026-03-31    Kane Li    - STOP condition changed from >= 0 to > 0
+#   v1.4    2026-04-01    Kane Li    - Renamed curtailment_start/end helpers
+#   v1.5    2026-04-07    Kane Li    - Added enable boolean condition
+#                                      Changed notify.email to notify.notification
+#   v1.6    2026-04-08    Kane Li    - Bug fix: added cleanup trigger when automation
+#                                      is disabled mid-session (cancels override)
+#                                      Bug fix: added window_end cleanup trigger so
+#                                      override is cancelled when monitoring window
+#                                      closes regardless of price
+################################################################################
+
+- id: amber_charge_on_negative_buy
+  alias: Amber Charge from Grid on Negative Buy Price
+  trace:
+    stored_traces: 20
+  description: >
+    When Amber buy price goes negative, forces battery charge from grid via
+    Amber Smart Shift API. Sends one start and one stop notification per session.
+    Re-issues override silently every 5 min to keep it alive.
+    Cleans up automatically if disabled mid-session or window closes.
+    Controlled by input_boolean.amber_enable_charge_on_negative_buy (default OFF).
+  trigger:
+    - platform: state
+      entity_id: input_datetime.amber_last_polled
+      id: price_change
+    # Cleanup trigger: cancel override when the monitoring window ends
+    - platform: time
+      at: input_datetime.amber_charge_on_negative_end
+      id: window_end
+    # Cleanup trigger: cancel override if automation is disabled mid-session
+    - platform: state
+      entity_id: input_boolean.amber_enable_charge_on_negative_buy
+      to: "off"
+      id: disabled
+  condition:
+    - condition: template
+      value_template: "{{ states('input_number.amber_general_price_actual') not in ['unknown', 'unavailable'] }}"
+    # Window check and enable check skipped for window_end and disabled — they always need to run cleanup
+    - condition: template
+      value_template: >
+        {% if trigger.id in ['window_end', 'disabled'] %}
+          true
+        {% else %}
+          {{ is_state('input_boolean.amber_enable_charge_on_negative_buy', 'on')
+             and now().strftime('%H:%M:%S') >= states('input_datetime.amber_charge_on_negative_start')[0:8]
+             and now().strftime('%H:%M:%S') < states('input_datetime.amber_charge_on_negative_end')[0:8] }}
+        {% endif %}
+  action:
+    - variables:
+        buy_price: "{{ states('input_number.amber_general_price_actual') | float(0) }}"
+        active:    "{{ is_state('input_boolean.amber_grid_charging_active', 'on') }}"
+
+    - choose:
+
+        # Automation disabled mid-session - cancel override and clear flag
+        - conditions:
+            - condition: trigger
+              id: disabled
+            - condition: template
+              value_template: "{{ active }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_grid_charging_active
+            - service: notify.notification
+              data:
+                title: "Amber Grid Charging Cancelled - Automation Disabled"
+                message: >
+                  Charge on Negative Buy automation was disabled while charging was active.
+                  Charge override cancelled. Smart Shift restored.
+
+        # Window ended with active session - cancel override and clear flag
+        - conditions:
+            - condition: trigger
+              id: window_end
+            - condition: template
+              value_template: "{{ active }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_grid_charging_active
+            - service: notify.notification
+              data:
+                title: "Amber Grid Charging Ended - Monitoring Window Closed"
+                message: >
+                  Negative price monitoring window ended.
+                  Charge override cancelled. Smart Shift restored.
+
+        # START - buy price gone negative and not already active
+        - conditions:
+            - condition: template
+              value_template: "{{ buy_price < 0 and not active }}"
+          sequence:
+            - service: shell_command.amber_force_charge
+              data:
+                duration: 60
+              response_variable: cmd_result
+            - if:
+                - condition: template
+                  value_template: "{{ cmd_result.returncode == 0 }}"
+              then:
+                - service: input_boolean.turn_on
+                  target:
+                    entity_id: input_boolean.amber_grid_charging_active
+                - service: notify.notification
+                  data:
+                    title: "Amber Grid Charging Started"
+                    message: >
+                      Buy price is {{ (buy_price * 100) | round(0) | int }}c/kWh.
+                      Started charging battery from grid via Amber Smart Shift API.
+              else:
+                - service: notify.notification
+                  data:
+                    title: "Amber Grid Charging Failed"
+                    message: >
+                      Failed to start grid charging via Amber API.
+                      Return code: {{ cmd_result.returncode }}
+                      stdout: {{ cmd_result.stdout }}
+                      stderr: {{ cmd_result.stderr }}
+
+        # MAINTAIN - buy price still negative and already active (silent re-issue)
+        - conditions:
+            - condition: template
+              value_template: "{{ buy_price < 0 and active }}"
+          sequence:
+            - service: shell_command.amber_force_charge
+              data:
+                duration: 60
+
+        # STOP - buy price has gone above zero and was active
+        # Note: 0c is still free electricity - keep charging until price is > 0
+        - conditions:
+            - condition: template
+              value_template: "{{ buy_price > 0 and active }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+              response_variable: cmd_result
+            - if:
+                - condition: template
+                  value_template: "{{ cmd_result.returncode == 0 }}"
+              then:
+                - service: input_boolean.turn_off
+                  target:
+                    entity_id: input_boolean.amber_grid_charging_active
+                - service: notify.notification
+                  data:
+                    title: "Amber Grid Charging Ended"
+                    message: >
+                      Buy price returned to {{ (buy_price * 100) | round(0) | int }}c/kWh (above zero).
+                      Override cancelled. Smart Shift restored to normal control.
+              else:
+                - service: notify.notification
+                  data:
+                    title: "Amber Grid Charging End Failed"
+                    message: >
+                      Failed to restore Smart Shift after buy price returned positive.
+                      Return code: {{ cmd_result.returncode }}
+                      stdout: {{ cmd_result.stdout }}
+                      stderr: {{ cmd_result.stderr }}

@@ -1,0 +1,261 @@
+################################################################################
+# Amber Force Export at Custom FiT
+################################################################################
+#
+#   When the Amber effective sell price (feed-in tariff, including bonuses) is
+#   at or above the configured custom threshold and Smart Shift is active, forces
+#   the battery to discharge and sell to the grid via the Amber Smart Shift API.
+#
+# How it works:
+#   Window start time fires (default 16:00)
+#       ↓
+#   Automation enabled? (input_boolean.amber_enable_force_export_custom_fit)
+#       ↓ No  → do nothing
+#       ↓ Yes
+#   Smart Shift active AND sell price >= threshold AND SOC >= minimum?
+#       ↓ Yes → call discharge 60 + set flag + notify (once)
+#       ↓ No (SS blocked) → notify, skip
+#       ↓
+#   amber_last_polled updates (every 5 min) OR threshold helpers change
+#       ↓
+#   Conditions still met AND already active → re-issue discharge 60 (silent)
+#   Conditions no longer met AND was active → cancel override + notify
+#   Window end fires AND was active → cancel override + notify
+#       ↓
+#   Automation disabled mid-session AND was active → cancel override + notify
+#
+# Enable / Disable:
+#   Controlled by input_boolean.amber_enable_force_export_custom_fit (default OFF).
+#   CLEANUP ON DISABLE: If disabled while a session is active, the discharge
+#   override is cancelled and the flag cleared automatically.
+#
+# Config changes take effect immediately:
+#   amber_min_sell_price and amber_min_soc_to_sell are state triggers so
+#   changing them via Settings → Helpers re-evaluates conditions immediately
+#   without waiting for the next price poll.
+#
+#-------------------------------------------------------------------------------
+# Configuration - configuration.yaml
+#-------------------------------------------------------------------------------
+#   → input_number.amber_min_sell_price (default 0.15 = 15c/kWh)
+#   → input_number.amber_min_soc_to_sell (default 10%)
+#   → input_datetime.amber_force_sell_on_custom_fit_start (default 16:00)
+#   → input_datetime.amber_force_sell_on_custom_fit_end (default 06:00)
+#   → input_boolean.amber_force_export_active (state tracking)
+#   → input_boolean.amber_enable_force_export_custom_fit (default off)
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → input_number.amber_feed_in_price_actual
+#   → input_number.amber_min_sell_price
+#   → input_number.amber_min_soc_to_sell
+#   → input_number.amber_battery_soc
+#   → input_boolean.amber_block_smart_shift_active
+#   → input_boolean.amber_force_export_active
+#   → input_boolean.amber_enable_force_export_custom_fit
+#   → shell_command.amber_force_discharge
+#   → shell_command.amber_cancel_override
+#   → shell_command.amber_smartshift_on
+#   → notify.notification  (configured in configuration.yaml)
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-03-28    Kane Li    - Initial version
+#   v1.1    2026-03-28    Kane Li    - Reduced duration to 60 min
+#                                      Switched price trigger to amber_last_polled
+#   v1.2    2026-03-31    Kane Li    - Added state tracking (input_boolean)
+#   v1.3    2026-04-01    Kane Li    - Fixed threshold from > to >=
+#                                      Fixed SOC in stop notification
+#   v1.4    2026-04-07    Kane Li    - Added enable boolean condition
+#                                      Changed notify.email to notify.notification
+#   v1.5    2026-04-08    Kane Li    - Bug fix: added cleanup trigger when automation
+#                                      is disabled mid-session (cancels override)
+#                                      Bug fix: added window_end cleanup trigger
+#                                      Bug fix: added amber_min_sell_price and
+#                                      amber_min_soc_to_sell as state triggers so
+#                                      config changes take effect immediately without
+#                                      waiting for the next price poll
+################################################################################
+
+- id: amber_force_export_at_custom_fit
+  alias: Amber Force Export at Custom FiT
+  trace:
+    stored_traces: 20
+  description: >
+    Forces battery discharge to grid via Amber Smart Shift API when effective
+    sell price is at or above the custom threshold, SOC is at or above minimum,
+    and Smart Shift is active. Config changes (threshold/SOC) take effect
+    immediately. Cleans up automatically if disabled mid-session.
+    Controlled by input_boolean.amber_enable_force_export_custom_fit (default OFF).
+  trigger:
+    - platform: time
+      at: input_datetime.amber_force_sell_on_custom_fit_start
+      id: window_start
+    - platform: time
+      at: input_datetime.amber_force_sell_on_custom_fit_end
+      id: window_end
+    - platform: state
+      entity_id: input_datetime.amber_last_polled
+      id: price_change
+    # Re-evaluate immediately when thresholds are changed via Settings → Helpers
+    - platform: state
+      entity_id: input_number.amber_min_sell_price
+      id: price_change
+    - platform: state
+      entity_id: input_number.amber_min_soc_to_sell
+      id: price_change
+    # Cleanup trigger: fires when automation is disabled mid-session
+    - platform: state
+      entity_id: input_boolean.amber_enable_force_export_custom_fit
+      to: "off"
+      id: disabled
+  condition:
+    - condition: template
+      value_template: "{{ states('input_number.amber_feed_in_price_actual') not in ['unknown', 'unavailable'] }}"
+    # Window check skipped for window_end and disabled triggers — they always need to run cleanup
+    - condition: template
+      value_template: >
+        {% if trigger.id in ['window_end', 'disabled'] %}
+          true
+        {% else %}
+          {% set now_t = now().strftime('%H:%M:%S') %}
+          {% set start = states('input_datetime.amber_force_sell_on_custom_fit_start')[0:8] %}
+          {% set end   = states('input_datetime.amber_force_sell_on_custom_fit_end')[0:8] %}
+          {% if start > end %}
+            {{ now_t >= start or now_t <= end }}
+          {% else %}
+            {{ now_t >= start and now_t <= end }}
+          {% endif %}
+        {% endif %}
+  action:
+    - variables:
+        sell_price:     "{{ states('input_number.amber_feed_in_price_actual') | float(0) }}"
+        min_sell_price: "{{ states('input_number.amber_min_sell_price') | float(0.15) }}"
+        min_soc:        "{{ states('input_number.amber_min_soc_to_sell') | float(10) }}"
+        soc:            "{{ states('input_number.amber_battery_soc') | float(0) }}"
+        ss_blocked:     "{{ is_state('input_boolean.amber_block_smart_shift_active', 'on') }}"
+        active:         "{{ is_state('input_boolean.amber_force_export_active', 'on') }}"
+        enabled:        "{{ is_state('input_boolean.amber_enable_force_export_custom_fit', 'on') }}"
+
+    - choose:
+
+        # Automation disabled mid-session - cancel override and clear flag
+        - conditions:
+            - condition: trigger
+              id: disabled
+            - condition: template
+              value_template: "{{ active }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_export_active
+            - service: notify.notification
+              data:
+                title: "Amber Force Export Cancelled - Automation Disabled"
+                message: >
+                  Force Export automation was disabled while a session was active.
+                  Discharge override cancelled. Smart Shift restored.
+
+        # Window ended with active session - cancel override and clear flag
+        - conditions:
+            - condition: trigger
+              id: window_end
+            - condition: template
+              value_template: "{{ active }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_export_active
+            - service: notify.notification
+              data:
+                title: "Amber Force Export Ended - Window Closed"
+                message: >
+                  Force export window ended. Override cancelled. Smart Shift restored.
+
+        # Smart Shift blocked - notify once (only if would otherwise start)
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and ss_blocked and sell_price >= min_sell_price and soc >= min_soc and not active }}"
+          sequence:
+            - service: notify.notification
+              data:
+                title: "Amber Force Export Skipped - Smart Shift Blocked"
+                message: >
+                  Sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh which is at or above
+                  the threshold of {{ (min_sell_price * 100) | round(0) | int }}c/kWh, but
+                  Smart Shift is currently disabled by the overnight block automation.
+                  Smart Shift will be re-enabled at the end of the overnight window.
+
+        # START - conditions met, not yet active
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and not ss_blocked and sell_price >= min_sell_price and soc >= min_soc and not active }}"
+          sequence:
+            - service: shell_command.amber_force_discharge
+              data:
+                duration: 60
+              response_variable: cmd_result
+            - if:
+                - condition: template
+                  value_template: "{{ cmd_result.returncode == 0 }}"
+              then:
+                - service: input_boolean.turn_on
+                  target:
+                    entity_id: input_boolean.amber_force_export_active
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Export Started"
+                    message: >
+                      Effective sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh
+                      (threshold: {{ (min_sell_price * 100) | round(0) | int }}c/kWh).
+                      SOC is {{ soc | round(0) | int }}%. Export started.
+              else:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Export Failed"
+                    message: >
+                      Failed to start force export via Amber API.
+                      Return code: {{ cmd_result.returncode }}
+                      stdout: {{ cmd_result.stdout }}
+                      stderr: {{ cmd_result.stderr }}
+
+        # MAINTAIN - conditions still met, already active (silent re-issue)
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and not ss_blocked and sell_price >= min_sell_price and soc >= min_soc and active }}"
+          sequence:
+            - service: shell_command.amber_force_discharge
+              data:
+                duration: 60
+
+        # STOP - conditions no longer met, was active
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and active and (ss_blocked or sell_price < min_sell_price or soc < min_soc) }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+              response_variable: cmd_result
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_export_active
+            - service: notify.notification
+              data:
+                title: "Amber Force Export Ended"
+                message: >
+                  {% if ss_blocked %}
+                  Smart Shift was blocked — export cannot continue.
+                  {% elif sell_price < min_sell_price %}
+                  Sell price dropped to {{ (sell_price * 100) | round(0) | int }}c/kWh
+                  (threshold: {{ (min_sell_price * 100) | round(0) | int }}c/kWh).
+                  {% else %}
+                  Battery SOC reached {{ soc | round(1) }}%
+                  (minimum: {{ min_soc | round(0) | int }}%).
+                  {% endif %}
+                  Override cancelled. Smart Shift restored.

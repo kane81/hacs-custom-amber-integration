@@ -1,0 +1,81 @@
+################################################################################
+# Amber Price Poller
+################################################################################
+#
+#   Polls the Amber SmartShift API at :30 seconds past each 5-minute NEM
+#   interval to get current prices and live metrics. Updates HA input_number
+#   helpers which trigger all downstream automations.
+#
+# How it works:
+#   Cron fires at :30 past each 5-min NEM interval (00:30, 05:30 ... 55:30)
+#       ↓
+#   Calls amber_graphql.py live via shell_command
+#       ↓
+#   Script calls SmartShiftLive GraphQL query
+#       ↓
+#   Updates HA helpers → triggers downstream automations
+#   On failure → notification alert sent
+#
+# Why :30 seconds:
+#   Amber confirms NEM interval prices at the start of each 5-minute interval.
+#   Polling at :30 seconds gives Amber time to publish confirmed prices.
+#
+# Enable / Disable:
+#   This automation is ALWAYS ON by default (no enable boolean).
+#   It is the heartbeat of the integration - all downstream automations depend
+#   on it. Disable from Settings → Automations only if you are intentionally
+#   stopping all Amber polling.
+#
+# Updated helpers:
+#   input_number.amber_general_price_actual    - buy price $/kWh
+#   input_number.amber_feed_in_price_actual    - effective sell $/kWh
+#   input_number.amber_feed_in_spot_actual     - spot sell $/kWh
+#   input_number.amber_import_cost_cents       - current interval import cost
+#   input_number.amber_export_earnings_cents   - current interval export earnings
+#   input_number.amber_total_earnings_cents    - current interval net
+#   input_datetime.amber_last_polled           - timestamp of last poll
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → shell_command.amber_live_poll
+#   → notify.notification  (configured in configuration.yaml)
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-03-27    Kane Li    - Initial version
+#   v1.1    2026-04-07    Kane Li    - Changed notify.email to notify.notification
+#                                      Updated comments and documentation
+################################################################################
+
+- id: amber_price_poll
+  alias: Amber Price Poller
+  trace:
+    stored_traces: 20
+  description: >
+    Polls Amber SmartShiftLive API at :30 past each 5-minute NEM interval.
+    Updates price and metrics helpers which trigger downstream automations.
+    Always-on automation - heartbeat of the entire integration.
+  trigger:
+    - platform: time_pattern
+      seconds: "30"
+      minutes: "/5"
+  action:
+    - service: shell_command.amber_live_poll
+      response_variable: poll_result
+    - if:
+        - condition: template
+          value_template: "{{ poll_result.returncode != 0 }}"
+      then:
+        # Sends via whichever notification platform is configured as
+        # notify.notification in configuration.yaml (e.g. email, mobile app, etc.)
+        - service: notify.notification
+          data:
+            title: "Amber Live Poll Failed"
+            message: >
+              Failed to poll Amber SmartShift live prices.
+              Prices may be stale.
+              Return code: {{ poll_result.returncode }}
+              stdout: {{ poll_result.stdout }}
+              stderr: {{ poll_result.stderr }}

@@ -132,18 +132,22 @@ Used to install pycognito and test authentication. Required for Steps 4 and 5.
 3. Go to the **Info** tab → **Start**
 4. Toggle **Show in sidebar** to on
 
-#### Verify Python 3
+#### Verify Python 3 and pip3
 
 Open **Terminal & SSH** from the sidebar and run:
 
 ```bash
-python3 --version
+python3 --version && pip3 --version
 ```
 
-If you see `command not found` run:
-
+If `python3` is not found:
 ```bash
 apk add python3
+```
+
+If `pip3` is not found:
+```bash
+apk add py3-pip
 ```
 
 ---
@@ -156,7 +160,18 @@ apk add python3
 4. Category: **Integration** → **Add**
 5. Search for **hacs-custom-amber-integration** → **Download**
 
-HACS will copy all files into `/config/` automatically — automations, scripts, templates and the `packages/` folder.
+HACS downloads the integration into `/config/custom_components/amber_integration/`.
+
+**After downloading**, open **Terminal & SSH** and run the following to copy the files into the correct locations:
+
+```bash
+cp -r /config/custom_components/amber_integration/automations/* /config/automations/
+cp -r /config/custom_components/amber_integration/scripts/. /config/scripts/
+cp -r /config/custom_components/amber_integration/packages /config/packages
+cp -r /config/custom_components/amber_integration/templates/* /config/templates/
+```
+
+> **Note:** This one-time copy is required because HACS only installs files into `custom_components/`. The scripts, automations, packages and templates need to be in their standard `/config/` locations for Home Assistant to load them correctly. When you update the integration via HACS in future, re-run these commands to apply the updated files.
 
 ---
 
@@ -211,6 +226,13 @@ Save the file with **Ctrl+S**.
 Open **Terminal & SSH** from the sidebar and run:
 
 ```bash
+pip3 install pycognito --break-system-packages
+```
+
+If you get `pip3: command not found`, install it first then retry:
+
+```bash
+apk add py3-pip
 pip3 install pycognito --break-system-packages
 ```
 
