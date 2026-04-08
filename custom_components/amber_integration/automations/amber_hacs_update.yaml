@@ -1,0 +1,54 @@
+################################################################################
+# Amber Integration - HACS Auto Install
+################################################################################
+#
+#   Automatically runs install.sh whenever HACS downloads or updates the
+#   Home Assistant Custom Amber Electric Integration.
+#
+#   This removes the need to manually run the install script after every
+#   HACS update — files are copied to /config/ automatically.
+#
+# How it works:
+#   HACS fires hacs_updated event when any repository is installed/updated
+#       ↓
+#   Was it this integration? Check repository name matches
+#       ↓ Yes
+#   Run install.sh via shell_command
+#       ↓
+#   Send notification confirming files were copied
+#
+# Note:
+#   This automation is installed by install.sh on first install so it cannot
+#   bootstrap itself on the very first install. Run install.sh manually once
+#   after the initial HACS download — after that all future updates are
+#   handled automatically.
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-04-08    Kane Li    - Initial version
+################################################################################
+
+- id: amber_hacs_auto_install
+  alias: Amber Integration - HACS Auto Install
+  description: >
+    Runs install.sh automatically when HACS updates the Amber integration,
+    copying files from custom_components into their /config/ locations.
+  trigger:
+    - platform: event
+      event_type: hacs_updated
+      event_data:
+        repository: "kane81/hacs-custom-amber-integration"
+  action:
+    - service: shell_command.amber_hacs_install
+      response_variable: result
+    - service: notify.notification
+      data:
+        title: "Amber Integration Updated"
+        message: >
+          HACS update detected. Install script ran automatically.
+          {% if result.returncode == 0 %}
+          ✅ Files copied successfully. Reload YAML or restart HA to apply changes.
+          {% else %}
+          ⚠️ Install script failed. Run manually: bash /config/custom_components/amber_integration/install.sh
+          {% endif %}

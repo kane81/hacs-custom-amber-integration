@@ -162,16 +162,17 @@ apk add py3-pip
 
 HACS downloads the integration into `/config/custom_components/amber_integration/`.
 
-**After downloading**, open **Terminal & SSH** and run the following to copy the files into the correct locations:
+**After every HACS install or update**, open **Terminal & SSH** and run the install script to copy files into their correct `/config/` locations:
 
 ```bash
-cp -r /config/custom_components/amber_integration/automations/* /config/automations/
-cp -r /config/custom_components/amber_integration/scripts/. /config/scripts/
-cp -r /config/custom_components/amber_integration/packages /config/packages
-cp -r /config/custom_components/amber_integration/templates/* /config/templates/
+bash /config/custom_components/amber_integration/install.sh
 ```
 
-> **Note:** This one-time copy is required because HACS only installs files into `custom_components/`. The scripts, automations, packages and templates need to be in their standard `/config/` locations for Home Assistant to load them correctly. When you update the integration via HACS in future, re-run these commands to apply the updated files.
+You will see each file being copied and a ✅ confirmation at the end.
+
+> **Why is this needed?** HACS only installs files into `custom_components/`. The scripts, automations, packages and templates need to be in their standard `/config/` locations for Home Assistant to load them.
+
+> **After this first run** the `amber_hacs_auto_install` automation is active and will run the install script automatically whenever you update the integration via HACS — you won't need to think about it again.
 
 ---
 

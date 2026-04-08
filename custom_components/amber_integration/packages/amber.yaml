@@ -53,6 +53,10 @@ shell_command:
   # Not used by automations - available for manual use via Developer Tools
   amber_graphql_status: "python3 /config/scripts/amber_graphql.py status"
 
+  # Runs the install script to copy integration files after a HACS update
+  # Called automatically by amber_hacs_auto_install automation
+  amber_hacs_install: "bash /config/custom_components/amber_integration/install.sh"
+
 ################################################################################
 # Input Numbers
 ################################################################################
