@@ -69,7 +69,7 @@ When configuring the VM network adapter use **Bridged Adapter** and **Paravirtua
 
 ## ⚠️ Disclaimer
 
-**This project uses Amber Electric's internal GraphQL API which is not publicly documented or officially supported.** This API was discovered by inspecting network traffic from the Amber app. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
+This project uses Amber Electric's internal API which is not publicly documented or officially supported. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
 
 ---
 
@@ -188,25 +188,7 @@ Save with **Ctrl+S**.
 
 ---
 
-### Step 4 — Install pycognito
-
-Open **Terminal & SSH** from the sidebar and run:
-
-```bash
-pip3 install pycognito --break-system-packages
-```
-
-If you get `pip3: command not found`:
-```bash
-apk add py3-pip
-pip3 install pycognito --break-system-packages
-```
-
-This only needs to be run once.
-
----
-
-### Step 5 — Test Authentication
+### Step 4 — Test Authentication
 
 ```bash
 python3 /config/scripts/amber_auth.py
@@ -236,13 +218,13 @@ HA updated. Last polled: 2026-04-08 10:30:00
 
 ---
 
-### Step 6 — Restart HA
+### Step 5 — Restart HA
 
 **Settings → System → Restart**
 
 ---
 
-### Step 7 — Verify Automations
+### Step 6 — Verify Automations
 
 After restart go to **Settings → Automations** and confirm the following automations are listed:
 
