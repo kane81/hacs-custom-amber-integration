@@ -3,6 +3,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/release/kane81/hacs-custom-amber-integration.svg)](https://github.com/kane81/hacs-custom-amber-integration/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.amber_integration.total)](https://analytics.home-assistant.io)
 
 > **Home Assistant integration that connects to Amber Electric's Smart Shift API to automate battery charging, discharging and solar export based on real-time electricity prices.**
 
@@ -112,10 +113,6 @@ Used to install pycognito, run the install script, and test authentication. Requ
 3. Go to the **Info** tab → **Start**
 4. Toggle **Show in sidebar** to on
 
-#### Verify Terminal works
-
-Open **Terminal & SSH** from the sidebar and confirm you get a command prompt. That's all — python3 and pip3 are installed automatically by the install script in Step 1.
-
 ---
 
 ### Step 1 — Add via HACS
@@ -128,15 +125,26 @@ Open **Terminal & SSH** from the sidebar and confirm you get a command prompt. T
 
 HACS downloads the integration into `/config/custom_components/amber_integration/`.
 
-**After every HACS install or update**, open **Terminal & SSH** and run the install script to copy files into their correct `/config/` locations:
+**This is a one-time step.** Open **Terminal & SSH** and run the install script:
 
 ```bash
 bash /config/custom_components/amber_integration/install.sh
 ```
 
-The script copies all automations, scripts, packages and templates, then checks your `configuration.yaml` for any missing lines and tells you exactly what to fix.
+The script will:
+- Install python3 and pip3 if not already present
+- Install the pycognito Python library
+- Copy all automations, scripts, packages and templates to `/config/`
+- Check your `configuration.yaml` for any missing lines and tell you exactly what to fix
 
-> **After this first run** the `amber_hacs_auto_install` automation is active and will run the install script automatically whenever you update the integration via HACS — you won't need to think about it again.
+**Verify it completed successfully** — the output should end with:
+```
+✅ Install complete!
+```
+
+If you see any ⚠️ warnings about missing `configuration.yaml` lines, follow the instructions printed by the script before continuing.
+
+> **After this first run** the `amber_hacs_auto_install` automation is installed and active. All future HACS updates will trigger the install script automatically — you will never need to run it manually again.
 
 ---
 
