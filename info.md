@@ -1,10 +1,8 @@
 ## ⚠️ Before You Install
 
-**This integration uses Amber Electric's internal GraphQL API which is not publicly documented or officially supported.**
+**This integration uses Amber Electric's internal API which is not publicly documented or supported.**
 
-- This API was discovered by inspecting network traffic from the Amber app
 - Amber may change or remove it at any time without notice
-- Battery control actions directly affect your energy system and electricity costs
 - This project has no affiliation with Amber Electric
 
 **Use at your own risk.**

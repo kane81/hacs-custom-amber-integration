@@ -286,6 +286,55 @@ To toggle: go to **Settings → Helpers**, find the helper by name and click the
 
 ---
 
+## Testing the Integration
+
+Before enabling optional automations it is worth verifying the integration is working correctly end to end.
+
+### Verify price polling is working
+
+1. Go to **Settings → Automations** and confirm **Amber Price Poller** is listed
+2. Go to **Developer Tools → States** and search for `amber_general_price_actual`
+3. The state should show a current price value and `amber_last_polled` should show a recent timestamp
+4. If values are 0 or stale, run manually in Terminal:
+   ```bash
+   python3 /config/scripts/amber_graphql.py live
+   ```
+
+### Test Smart Shift control (recommended before enabling automations)
+
+This confirms your credentials are correct and the API can actually control your battery.
+
+1. In Terminal, disable Smart Shift:
+   ```bash
+   python3 /config/scripts/amber_graphql.py smartshift_off
+   ```
+2. Open the **Amber app** on your phone → check that Smart Shift shows as **disabled**
+3. Re-enable Smart Shift:
+   ```bash
+   python3 /config/scripts/amber_graphql.py smartshift_on
+   ```
+4. Check the Amber app again — Smart Shift should show as **enabled**
+
+If both steps work correctly your credentials and API connection are good and it is safe to enable the automations.
+
+### Enable your first automation
+
+Start with just one automation to verify it behaves as expected before enabling others:
+
+1. Go to **Settings → Helpers**
+2. Find `amber_enable_negative_price_notify` and toggle it **ON**
+3. This automation sends a notification when buy price goes negative — low risk, no battery control
+4. Monitor it for a day or two before enabling the battery control automations
+
+When you are ready to enable battery control:
+- `amber_enable_force_export_custom_fit` — discharges battery at high sell prices
+- `amber_enable_charge_on_negative_buy` — charges battery when buy price goes negative
+- `amber_enable_block_smart_shift` — disables Smart Shift overnight
+
+> ⚠️ Remember: all automation toggles reset to OFF every time HA restarts. You will need to re-enable them after each restart.
+
+---
+
 ## Configuration
 
 All settings can be changed without editing any YAML files. Changes to price thresholds take effect immediately — no restart needed.
