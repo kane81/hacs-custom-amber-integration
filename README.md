@@ -8,47 +8,29 @@
 
 ```mermaid
 flowchart TD
-    AmberAPI["☁️ Amber Electric API
-GraphQL · SmartShiftLive"]
-    AuthPy["🔑 amber_auth.py
-AWS Cognito login · token cache
-auto-refresh every hour"]
-    GraphQLPy["⚙️ amber_graphql.py
-live · discharge · charge · cancel · smartshift"]
-    Helpers["📦 HA input_number helpers
-buy price · sell price · SOC
-import cost · export earnings · last polled"]
-
-    ForceExport["📤 Force Export
-high sell price"]
-    GridCharge["🔋 Grid Charge
-negative buy price"]
-    BlockSS["🌙 Block Smart Shift
-overnight window"]
-    PriceNotify["🔔 Price Notify
-alerts"]
-
-    SmartShiftAPI["☁️ Amber Smart Shift API
-discharge · charge · smartshift on/off"]
-    Battery["🔋 Your Battery
-Smart Shift enrolled"]
-    Notify["📣 notify.notification
-HA bell · email · mobile"]
+    AmberAPI["☁️ Amber Electric API\nGraphQL · SmartShiftLive"]
+    AuthPy["🔑 amber_auth.py\nAWS Cognito login · token cache\nauto-refresh every hour"]
+    GraphQLPy["⚙️ amber_graphql.py\nlive · discharge · charge · cancel · smartshift"]
+    Helpers["📦 HA input_number helpers\nbuy price · sell price · SOC\nimport cost · export earnings · last polled"]
+    ForceExport["📤 Force Export\nhigh sell price"]
+    GridCharge["🔋 Grid Charge\nnegative buy price"]
+    BlockSS["🌙 Block Smart Shift\novernight window"]
+    PriceNotify["🔔 Price Notify\nalerts"]
+    SmartShiftAPI["☁️ Amber Smart Shift API\ndischarge · charge · smartshift on/off"]
+    Battery["🔋 Your Battery\nSmart Shift enrolled"]
+    Notify["📣 notify.notification\nHA bell · email · mobile"]
 
     AmberAPI -->|"every 5 min"| GraphQLPy
     AuthPy -->|"token"| GraphQLPy
     GraphQLPy -->|"updates"| Helpers
-
     Helpers --> ForceExport
     Helpers --> GridCharge
     Helpers --> BlockSS
     Helpers --> PriceNotify
-
     ForceExport -->|"discharge"| SmartShiftAPI
     GridCharge -->|"charge"| SmartShiftAPI
     BlockSS -->|"smartshift on/off"| SmartShiftAPI
     SmartShiftAPI --> Battery
-
     ForceExport --> Notify
     GridCharge --> Notify
     BlockSS --> Notify
@@ -89,8 +71,6 @@ When configuring the VM network adapter use **Bridged Adapter** and **Paravirtua
 
 **This project uses Amber Electric's internal GraphQL API which is not publicly documented or officially supported.** This API was discovered by inspecting network traffic from the Amber app. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
 
-**Use at your own risk. This project has no affiliation with Amber Electric.**
-
 ---
 
 ## What It Does
@@ -125,30 +105,16 @@ Used to edit `configuration.yaml` and `secrets.yaml` directly in your browser. R
 
 #### Terminal & SSH — command line
 
-Used to install pycognito and test authentication. Required for Steps 4 and 5.
+Used to install pycognito, run the install script, and test authentication. Required for Steps 1, 4 and 5.
 
 1. Search for `Terminal & SSH` → **Install**
 2. Go to the **Configuration** tab → click **Show unused optional configuration options** → expand **ssh** → set a username and password — **this is required or the add-on will not start**
 3. Go to the **Info** tab → **Start**
 4. Toggle **Show in sidebar** to on
 
-#### Verify Python 3 and pip3
+#### Verify Terminal works
 
-Open **Terminal & SSH** from the sidebar and run:
-
-```bash
-python3 --version && pip3 --version
-```
-
-If `python3` is not found:
-```bash
-apk add python3
-```
-
-If `pip3` is not found:
-```bash
-apk add py3-pip
-```
+Open **Terminal & SSH** from the sidebar and confirm you get a command prompt. That's all — python3 and pip3 are installed automatically by the install script in Step 1.
 
 ---
 
@@ -168,40 +134,40 @@ HACS downloads the integration into `/config/custom_components/amber_integration
 bash /config/custom_components/amber_integration/install.sh
 ```
 
-You will see each file being copied and a ✅ confirmation at the end.
-
-> **Why is this needed?** HACS only installs files into `custom_components/`. The scripts, automations, packages and templates need to be in their standard `/config/` locations for Home Assistant to load them.
+The script copies all automations, scripts, packages and templates, then checks your `configuration.yaml` for any missing lines and tells you exactly what to fix.
 
 > **After this first run** the `amber_hacs_auto_install` automation is active and will run the install script automatically whenever you update the integration via HACS — you won't need to think about it again.
 
 ---
 
-### Step 2 — Enable the Package
+### Step 2 — Update configuration.yaml
 
-Open **Studio Code Server** from the sidebar. In the file explorer on the left, navigate to and open `/config/configuration.yaml`.
+Open **Studio Code Server** from the sidebar. In the file explorer on the left open `/config/configuration.yaml`.
 
-Add the following under the `homeassistant:` key:
+Make sure these two lines are present — add any that are missing:
 
+**1. Load automations from the automations folder:**
+```yaml
+automation: !include_dir_merge_list automations/
+```
+
+> If you already have `automation: !include automations.yaml` replace that line with the one above.
+
+**2. Load the integration package (helpers, shell commands, notify):**
 ```yaml
 homeassistant:
   packages: !include_dir_named packages/
 ```
 
-> If you already have a `homeassistant:` section, add just the `packages:` line underneath it. If you don't have a `homeassistant:` section at all, add both lines.
+> If you already have a `homeassistant:` section, add just the `packages:` line underneath it.
 
-Save the file with **Ctrl+S**, then reload:
-
-**Developer Tools → YAML → Reload All**
-
-This single line loads all helpers, shell commands and notification config automatically — no further YAML editing required for the integration to function.
+Save with **Ctrl+S** then restart HA: **Settings → System → Restart**
 
 ---
 
 ### Step 3 — Add Credentials
 
-Still in **Studio Code Server**, open `/config/secrets.yaml` from the file explorer.
-
-Add the following lines:
+Still in **Studio Code Server**, open `/config/secrets.yaml` from the file explorer and add:
 
 ```yaml
 amber_email: "your@email.com"
@@ -213,7 +179,7 @@ smtp_username: "your@gmail.com"
 smtp_password: "your-app-password"
 ```
 
-Save the file with **Ctrl+S**.
+Save with **Ctrl+S**.
 
 **Getting your HA long-lived access token:**
 1. Click your profile avatar (bottom left sidebar)
@@ -230,20 +196,17 @@ Open **Terminal & SSH** from the sidebar and run:
 pip3 install pycognito --break-system-packages
 ```
 
-If you get `pip3: command not found`, install it first then retry:
-
+If you get `pip3: command not found`:
 ```bash
 apk add py3-pip
 pip3 install pycognito --break-system-packages
 ```
 
-This installs the Python library used to authenticate with Amber's AWS Cognito service. It only needs to be run once.
+This only needs to be run once.
 
 ---
 
 ### Step 5 — Test Authentication
-
-Still in Terminal, run:
 
 ```bash
 python3 /config/scripts/amber_auth.py
@@ -257,8 +220,6 @@ Site ID:   01K...
 Config ID: 01K...
 Token cached successfully
 ```
-
-If you see an error, double-check `amber_email` and `amber_password` in `secrets.yaml` match what you use to log into the Amber app.
 
 Then test a live price poll:
 
@@ -279,11 +240,34 @@ HA updated. Last polled: 2026-04-08 10:30:00
 
 **Settings → System → Restart**
 
-After restart the two core automations run automatically:
-- **Amber Auth on Startup** — authenticates with Amber on every HA restart
-- **Amber Price Poller** — polls prices every 5 minutes
+---
 
-Confirm they are listed and active under **Settings → Automations**.
+### Step 7 — Verify Automations
+
+After restart go to **Settings → Automations** and confirm the following automations are listed:
+
+| Automation | Expected state |
+|---|---|
+| Amber Auth on Startup | Enabled — runs on every HA restart |
+| Amber Price Poller | Enabled — polls every 5 minutes |
+| Amber Block Smart Shift Overnight | Listed — off by default |
+| Amber Charge from Grid on Negative Buy Price | Listed — off by default |
+| Amber Force Export at Custom FiT | Listed — off by default |
+| Amber Negative Price Notification | Listed — off by default |
+| Amber Integration - HACS Auto Install | Enabled — handles future updates |
+
+If automations are missing, re-run the install script:
+```bash
+bash /config/custom_components/amber_integration/install.sh
+```
+
+#### ⚠️ Note on the Automation Editor
+
+When you open an automation from **Settings → Automations** you may see a warning that the automation was created outside the UI and cannot be edited here. This is expected — automations stored in separate YAML files under `/config/automations/` appear as read-only in the GUI.
+
+This is intentional. Keeping them as separate files means HACS updates automatically apply changes when you run the install script. If you accept the GUI's offer to migrate them into a single `automations.yaml` file you can then edit them in the UI, but future project updates will no longer apply to them automatically.
+
+**Recommendation:** leave them as-is and edit via Studio Code Server if needed.
 
 ---
 
@@ -304,19 +288,19 @@ To toggle: go to **Settings → Helpers**, find the helper by name and click the
 
 ## Configuration
 
-All settings can be changed without editing any YAML files.
+All settings can be changed without editing any YAML files. Changes to price thresholds take effect immediately — no restart needed.
 
 ### Option A — Overview → Devices & Services (recommended)
 
 1. Go to your **Overview** dashboard
-2. Click **Devices & Services** (top right button)
+2. Click **Devices & Services** (top right corner button)
 3. Select the **Helpers** tab
 4. Search for the helper you want to change (e.g. `amber_min_sell_price`)
-5. Click it and update the value — changes take effect immediately, no restart needed
+5. Click it and update the value
 
 ### Option B — Settings → Helpers
 
-Go to **Settings → Helpers**, find the helper by name and click it to edit.
+**Settings → Helpers** → find helper by name → click to edit.
 
 ### Time Windows
 
@@ -336,15 +320,13 @@ Go to **Settings → Helpers**, find the helper by name and click it to edit.
 | `amber_min_sell_price` | $0.15/kWh | Minimum sell price to trigger force export |
 | `amber_min_soc_to_sell` | 10% | Minimum battery SOC before stopping export |
 
-> Changes to thresholds take effect immediately — no need to wait for the next price poll.
-
 ---
 
 ## Notifications
 
 By default all notifications go to the **HA Notifications bell (🔔)** in the sidebar — no setup needed.
 
-To add **email** or **mobile push**, edit `packages/amber.yaml` and uncomment the relevant blocks. The file has full instructions in comments.
+To add **email** or **mobile push**, open `/config/packages/amber.yaml` in Studio Code Server and uncomment the relevant blocks. The file has full instructions in the comments.
 
 **Finding your mobile device service name:**
 Open **Developer Tools → Actions** and search `notify.mobile_app` — you will see entries like `notify.mobile_app_your_device`.
@@ -353,14 +335,22 @@ Open **Developer Tools → Actions** and search `notify.mobile_app` — you will
 
 ## Dashboard Card
 
-Add this as a **Markdown card** to any HA dashboard to see live Amber prices, interval cost/earnings, and automation status at a glance.
+The dashboard card shows live Amber prices, current interval cost/earnings, and the status of all automations at a glance.
 
-**Steps:**
-1. Edit your dashboard → **Add Card** → **Markdown**
-2. Paste the template below into the Content field
-3. Save
+![Dashboard Card](images/dashboard_card.jpeg)
 
 **Icon legend:** 🟢 enabled & active · 🔴 enabled, waiting for conditions · 🚫 disabled
+
+### Adding the card
+
+1. Go to **Settings → Dashboards**
+2. Open the dashboard you want to add the card to (or create a new one with **Add Dashboard**)
+3. Click the **pencil icon** (top right) to enter edit mode
+4. Click **+ Add Card**
+5. Scroll down and select **Markdown**
+6. Delete any placeholder text in the content field
+7. Paste the full template below
+8. Click **Save**
 
 ```jinja
 {# --- Amber Prices --- #}
@@ -429,6 +419,8 @@ python3 /config/scripts/amber_auth.py                  # manually refresh auth t
 ---
 
 ## Troubleshooting
+
+**Automations not appearing** — re-run the install script: `bash /config/custom_components/amber_integration/install.sh`. Confirm `automation: !include_dir_merge_list automations/` is in `configuration.yaml`, then restart HA.
 
 **Auth fails on startup** — check `amber_email` and `amber_password` in `secrets.yaml`. Run `python3 /config/scripts/amber_auth.py` in Terminal to see the exact error.
 
