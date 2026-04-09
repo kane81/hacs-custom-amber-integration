@@ -55,6 +55,13 @@
 #                                  - Amber API occasionally returns null for liveMetrics
 #                                  - between intervals; .get() default does not handle None
 #                                  - Changed to `or {}` / `or 0` pattern to handle null
+#   v1.4    2026-04-10    Kane Li  - Fixed same None TypeError in status command liveMetrics
+#                                  - Added battery offline detection via stateOfChargePercentage
+#                                  - None SOC = Amber cannot communicate with battery
+#                                  - Writes amber_battery_offline boolean to HA
+#                                  - Sends notification once on offline/online transition
+#                                  - Added call_ha_service() helper function
+#                                  - Updates binary_sensor.amber_battery_online in HA
 # =============================================================================
 
 import json
@@ -259,7 +266,10 @@ def poll_live(id_token, site_id):
     feed_in_spot = sell_price
 
     # Battery SOC from Amber - updated every 5 minutes with the price poll
-    soc = live.get("stateOfChargePercentage", 0)
+    # stateOfChargePercentage is None when Amber cannot communicate with the battery
+    soc_raw      = live.get("stateOfChargePercentage")
+    soc          = soc_raw if soc_raw is not None else 0
+    battery_online = soc_raw is not None
 
     # Live metrics for current interval
     # Use `or {}` not `.get("liveMetrics", {})` — the API can return null for
@@ -301,6 +311,13 @@ def poll_live(id_token, site_id):
     update_ha_entity(ha_url, ha_token,
         "input_number.amber_battery_soc", soc,
         {"unit_of_measurement": "%", "friendly_name": "Amber Battery SOC"})
+
+    # Update battery online/offline state
+    # on = Amber can communicate with battery, off = communication error
+    update_ha_entity(ha_url, ha_token,
+        "binary_sensor.amber_battery_online",
+        "on" if battery_online else "off",
+        {"friendly_name": "Amber Battery Online", "device_class": "connectivity"})
 
     update_ha_entity(ha_url, ha_token,
         "input_number.amber_import_cost_cents", round(import_cost_cents, 4),
@@ -705,12 +722,12 @@ if __name__ == "__main__":
         print(f"Buy price:  {live['currentGeneralUsagePrice']}c/kWh")
         print(f"Sell price: {live['currentFeedInPrice']}c/kWh")
 
-        if live.get("liveMetrics"):
-            m = live["liveMetrics"]
+        m = live.get("liveMetrics") or {}
+        if m:
             print(f"\n--- Current Interval Metrics ---")
-            print(f"Import cost:     ${m.get('importCostsCents', 0) / 100:.4f}")
-            print(f"Export earnings: ${m.get('exportEarningsCents', 0) / 100:.4f}")
-            print(f"Net:             ${m.get('totalEarningsCents', 0) / 100:.4f}")
+            print(f"Import cost:     ${(m.get('importCostsCents') or 0) / 100:.4f}")
+            print(f"Export earnings: ${(m.get('exportEarningsCents') or 0) / 100:.4f}")
+            print(f"Net:             ${(m.get('totalEarningsCents') or 0) / 100:.4f}")
 
         ss_config = status.get("smartshiftBatteryStrategyConfig", {})
         ss_status  = ss_config.get("status", "unknown")

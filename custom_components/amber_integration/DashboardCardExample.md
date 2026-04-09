@@ -81,7 +81,9 @@ Automation status icon legend:
 **💲 Amber**
 &nbsp;&nbsp;Buy **{{ (buy_price * 100) | round(0) | int }}c** &nbsp;&nbsp; Sell **{{ sell_display }}c** &nbsp;&nbsp; SOC **{{ soc | round(0) | int }}%**
 &nbsp;&nbsp;Import **${{ (import_cost / 100) | round(2) }}** &nbsp;&nbsp; Export **${{ (export_earnings / 100) | abs | round(2) }}** &nbsp;&nbsp; {% if total_earnings > 0 %}💰 Credit **${{ (total_earnings / 100) | round(2) }}**{% elif total_earnings < 0 %}💸 Expense **${{ (total_earnings / 100) | abs | round(2) }}**{% else %}**$0.00**{% endif %}
-&nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
+{% if battery_offline %}🚫 **Amber Battery Connection Offline** — check Amber app for details
+{% endif %}{% if not battery_online %}🚫 **Amber Battery Connection Offline** — check Amber app for details
+{% endif %}&nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
 
 **🤖 Automations**
 &nbsp;&nbsp;{% if not en_force_export %}🚫{% elif force_export_active %}🟢{% else %}🔴{% endif %} **Force Export** — Min FiT {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}

@@ -249,6 +249,14 @@ input_boolean:
     name: Amber Force Export Active
     icon: mdi:transmission-tower-export
 
+  # True when Amber cannot communicate with the battery
+  # Set by: amber_graphql.py live poll when stateOfChargePercentage is None
+  # Used by: dashboard card to show offline warning
+  amber_battery_offline:
+    name: Amber Battery Offline
+    initial: false
+    icon: mdi:battery-off
+
 ################################################################################
 # Notifications
 #

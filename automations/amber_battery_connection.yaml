@@ -1,0 +1,70 @@
+################################################################################
+# Amber Battery Connection Monitor
+################################################################################
+#
+#   Monitors whether Amber can communicate with the battery and sends a
+#   notification when communication is lost and when it is restored.
+#   Only sends one notification per state change — not every poll.
+#
+# How it works:
+#   amber_price_poll updates binary_sensor.amber_battery_online every 5 min
+#       ↓
+#   State changes to OFF → send "battery offline" notification once
+#   State changes to ON  → send "battery restored" notification once
+#
+# The binary_sensor is set by amber_graphql.py live command:
+#   ON  = stateOfChargePercentage is a valid number (Amber can see battery)
+#   OFF = stateOfChargePercentage is None (Amber reports communication error)
+#
+#-------------------------------------------------------------------------------
+# Dependencies
+#-------------------------------------------------------------------------------
+#   → binary_sensor.amber_battery_online  (set by amber_graphql.py live)
+#   → notify.notification
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-04-10    Kane Li    - Initial version
+################################################################################
+
+- id: amber_battery_connection_monitor
+  alias: Amber Battery Connection Monitor
+  trace:
+    stored_traces: 20
+  description: >
+    Notifies once when Amber loses communication with the battery and once
+    when communication is restored. State is set by amber_graphql.py live.
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.amber_battery_online
+      to: "off"
+      id: went_offline
+    - platform: state
+      entity_id: binary_sensor.amber_battery_online
+      to: "on"
+      id: came_online
+  action:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: went_offline
+          sequence:
+            - service: notify.notification
+              data:
+                title: "⚠️ Amber Battery Connection Offline"
+                message: >
+                  Amber cannot communicate with your battery.
+                  Check the Amber app for details.
+                  Automations relying on battery SOC may not function correctly.
+
+        - conditions:
+            - condition: trigger
+              id: came_online
+          sequence:
+            - service: notify.notification
+              data:
+                title: "✅ Amber Battery Connection Restored"
+                message: >
+                  Amber battery communication has been restored.
+                  All automations will resume normal operation.
