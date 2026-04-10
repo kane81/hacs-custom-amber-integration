@@ -246,34 +246,30 @@ input_boolean:
 
   amber_enable_block_smart_shift:
     name: "Enable Automation: Block Smart Shift"
-    # restore_mode: On first install defaults to off (no stored state exists).
-    # After first restart HA remembers whatever the user last set.
-    # This prevents settings resetting to default on every HA restart.
-    restore_mode: restore_default_zero
+    # No initial: — HA automatically restores the last known state on restart.
+    # On first install this defaults to off (no stored state exists yet).
+    # From then on HA remembers whatever the user last set.
     icon: mdi:power-sleep
 
   amber_enable_charge_on_negative_buy:
     name: "Enable Automation: Charge on Negative Buy"
-    # restore_mode: On first install defaults to off (no stored state exists).
-    # After first restart HA remembers whatever the user last set.
-    # This prevents settings resetting to default on every HA restart.
-    restore_mode: restore_default_zero
+    # No initial: — HA automatically restores the last known state on restart.
+    # On first install this defaults to off (no stored state exists yet).
+    # From then on HA remembers whatever the user last set.
     icon: mdi:battery-charging
 
   amber_enable_force_export_custom_fit:
     name: "Enable Automation: Force Export Custom FiT"
-    # restore_mode: On first install defaults to off (no stored state exists).
-    # After first restart HA remembers whatever the user last set.
-    # This prevents settings resetting to default on every HA restart.
-    restore_mode: restore_default_zero
+    # No initial: — HA automatically restores the last known state on restart.
+    # On first install this defaults to off (no stored state exists yet).
+    # From then on HA remembers whatever the user last set.
     icon: mdi:transmission-tower-export
 
   amber_enable_negative_price_notify:
     name: "Enable Automation: Negative Price Notify"
-    # restore_mode: On first install defaults to off (no stored state exists).
-    # After first restart HA remembers whatever the user last set.
-    # This prevents settings resetting to default on every HA restart.
-    restore_mode: restore_default_zero
+    # No initial: — HA automatically restores the last known state on restart.
+    # On first install this defaults to off (no stored state exists yet).
+    # From then on HA remembers whatever the user last set.
     icon: mdi:bell-alert
 
   #-----------------------------------------------------------------------------
