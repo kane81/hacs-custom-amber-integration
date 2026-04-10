@@ -143,6 +143,10 @@ input_number:
     min: 0
     max: 1
     step: 0.01
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: 0.15
     unit_of_measurement: $/kWh
 
@@ -151,6 +155,10 @@ input_number:
     min: 0
     max: 100
     step: 1
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: 10
     unit_of_measurement: "%"
 
@@ -170,36 +178,60 @@ input_datetime:
     name: Amber Charge on Negative Start
     has_date: false
     has_time: true
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: "10:00:00"
 
   amber_charge_on_negative_end:
     name: Amber Charge on Negative End
     has_date: false
     has_time: true
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: "17:00:00"
 
   amber_force_sell_on_custom_fit_start:
     name: Amber Force Sell Start
     has_date: false
     has_time: true
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: "16:00:00"
 
   amber_force_sell_on_custom_fit_end:
     name: Amber Force Sell End
     has_date: false
     has_time: true
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: "06:00:00"
 
   amber_block_smart_shift_start:
     name: Amber Block Smart Shift Start
     has_date: false
     has_time: true
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: "00:00:00"
 
   amber_block_smart_shift_end:
     name: Amber Block Smart Shift End
     has_date: false
     has_time: true
+    # ⚠️ After your first HA restart, remove the initial: line below.
+    # With initial: present HA resets this value on every restart, wiping
+    # any changes you made via Settings → Helpers.
+    # Without initial: HA restores the last value you set.
     initial: "06:00:00"
 
 ################################################################################
@@ -214,22 +246,34 @@ input_boolean:
 
   amber_enable_block_smart_shift:
     name: "Enable Automation: Block Smart Shift"
-    initial: false
+    # restore_mode: On first install defaults to off (no stored state exists).
+    # After first restart HA remembers whatever the user last set.
+    # This prevents settings resetting to default on every HA restart.
+    restore_mode: restore_default_zero
     icon: mdi:power-sleep
 
   amber_enable_charge_on_negative_buy:
     name: "Enable Automation: Charge on Negative Buy"
-    initial: false
+    # restore_mode: On first install defaults to off (no stored state exists).
+    # After first restart HA remembers whatever the user last set.
+    # This prevents settings resetting to default on every HA restart.
+    restore_mode: restore_default_zero
     icon: mdi:battery-charging
 
   amber_enable_force_export_custom_fit:
     name: "Enable Automation: Force Export Custom FiT"
-    initial: false
+    # restore_mode: On first install defaults to off (no stored state exists).
+    # After first restart HA remembers whatever the user last set.
+    # This prevents settings resetting to default on every HA restart.
+    restore_mode: restore_default_zero
     icon: mdi:transmission-tower-export
 
   amber_enable_negative_price_notify:
     name: "Enable Automation: Negative Price Notify"
-    initial: false
+    # restore_mode: On first install defaults to off (no stored state exists).
+    # After first restart HA remembers whatever the user last set.
+    # This prevents settings resetting to default on every HA restart.
+    restore_mode: restore_default_zero
     icon: mdi:bell-alert
 
   #-----------------------------------------------------------------------------
@@ -238,14 +282,20 @@ input_boolean:
   #-----------------------------------------------------------------------------
 
   amber_grid_charging_active:
+    # initial: false is intentional — this is a session state flag
+    # that must always reset to off on restart. Do NOT remove initial:.
     name: Amber Grid Charging Active
     initial: false
 
   amber_block_smart_shift_active:
+    # initial: false is intentional — this is a session state flag
+    # that must always reset to off on restart. Do NOT remove initial:.
     name: Amber Block Smart Shift Active
     initial: false
 
   amber_force_export_active:
+    # initial: false is intentional — this is a session state flag
+    # that must always reset to off on restart. Do NOT remove initial:.
     name: Amber Force Export Active
     icon: mdi:transmission-tower-export
 
@@ -253,6 +303,8 @@ input_boolean:
   # Set by: amber_graphql.py live poll when stateOfChargePercentage is None
   # Used by: dashboard card to show offline warning
   amber_battery_offline:
+    # initial: false is intentional — this is a session state flag
+    # that must always reset to off on restart. Do NOT remove initial:.
     name: Amber Battery Offline
     initial: false
     icon: mdi:battery-off

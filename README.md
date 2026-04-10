@@ -83,6 +83,7 @@ This project uses Amber Electric's internal API which is not publicly documented
 | **Grid Charging** | Charges battery from grid when buy price goes negative |
 | **Block Smart Shift** | Disables Smart Shift overnight to preserve battery for next day |
 | **Price Notifications** | Alerts when buy price goes negative and when it recovers |
+| **Battery Offline Detection** | Detects when Amber cannot communicate with the battery — notifies once when offline and again when restored. Shows a warning on the dashboard card. |
 
 All optional automations are **off by default** — enable them individually from Settings → Helpers once you are confident the integration is working correctly.
 
@@ -420,6 +421,7 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 {% set force_export_active = is_state('input_boolean.amber_force_export_active', 'on') %}
 {% set ss_blocked          = is_state('input_boolean.amber_block_smart_shift_active', 'on') %}
 {% set grid_charging       = is_state('input_boolean.amber_grid_charging_active', 'on') %}
+{% set battery_offline     = is_state('input_boolean.amber_battery_offline', 'on') %}
 {# --- Icon logic: 🚫 disabled · 🟢 active · 🔴 enabled/waiting --- #}
 {% set ic_force_export = '🚫' if not en_force_export else ('🟢' if force_export_active else '🔴') %}
 {% set ic_block_ss     = '🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴') %}
@@ -429,6 +431,7 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 **💲 Amber**
 &nbsp;&nbsp;Buy **{{ (buy_price * 100) | round(0) | int }}c** &nbsp;&nbsp; Sell **{{ sell_display }}c** &nbsp;&nbsp; SOC **{{ soc | round(0) | int }}%**
 &nbsp;&nbsp;Import **${{ (import_cost / 100) | round(2) }}** &nbsp;&nbsp; Export **${{ (export_earnings / 100) | abs | round(2) }}** &nbsp;&nbsp; {{ '💰 Credit **$' ~ (total_earnings / 100) | round(2) ~ '**' if total_earnings > 0 else '💸 Expense **$' ~ ((total_earnings / 100) | abs) | round(2) ~ '**' if total_earnings < 0 else '**$0.00**' }}
+{{ '&nbsp;&nbsp;🚫 **Amber Battery Connection Offline** — check Amber app for details' if battery_offline else '' }}
 &nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
 
 **🤖 Automations**
