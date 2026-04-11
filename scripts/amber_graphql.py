@@ -55,13 +55,13 @@
 #                                  - Amber API occasionally returns null for liveMetrics
 #                                  - between intervals; .get() default does not handle None
 #                                  - Changed to `or {}` / `or 0` pattern to handle null
-#   v1.4    2026-04-10    Kane Li  - Fixed same None TypeError in status command liveMetrics
+#   v1.4    2026-04-11    Kane Li  - Fixed same None TypeError in status command liveMetrics
 #                                  - Added battery offline detection via stateOfChargePercentage
 #                                  - None SOC = Amber cannot communicate with battery
-#                                  - Writes amber_battery_offline boolean to HA
-#                                  - Sends notification once on offline/online transition
+#                                  - Writes input_boolean.amber_battery_offline to HA
+#                                  - Reads previous state to notify only on transitions
+#                                  - Notifies once when offline, once when restored
 #                                  - Added call_ha_service() helper function
-#                                  - Updates binary_sensor.amber_battery_online in HA
 # =============================================================================
 
 import json
