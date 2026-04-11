@@ -362,6 +362,30 @@ All settings can be changed without editing any YAML files. Changes to price thr
 
 ---
 
+## Internal State Helpers
+
+The integration uses several `input_boolean` and `input_number` helpers as internal state flags — they are set and cleared automatically by automations and the polling script. They are **not meant to be toggled manually**.
+
+| Helper | Purpose |
+|---|---|
+| `amber_grid_charging_active` | Set when grid charging is in progress |
+| `amber_block_smart_shift_active` | Set when overnight Smart Shift block is active |
+| `amber_force_export_active` | Set when force export is in progress |
+| `amber_battery_offline` | Set when Amber cannot communicate with the battery |
+
+### Hiding them from the UI
+
+The install script hides these automatically using the HA entity registry API. If for any reason they are still visible, you can hide them manually:
+
+1. Go to **Settings → Devices & Services → Entities**
+2. Search for the helper name (e.g. `amber_grid_charging_active`)
+3. Click the entity → click the **⚙️ cog icon**
+4. Toggle **Hidden** to on → **Update**
+
+Hidden helpers still function normally — automations can still read and write them. They just won't appear in Settings → Helpers or on dashboards.
+
+---
+
 ## Notifications
 
 By default all notifications go to the **HA Notifications bell (🔔)** in the sidebar — no setup needed.

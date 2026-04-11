@@ -69,6 +69,46 @@ echo "📄 Copying templates..."
 mkdir -p /config/templates
 cp -v $SRC/templates/amber.yaml /config/templates/
 
+
+# -----------------------------------------------------------------------------
+# Hide internal state flag helpers from the HA UI
+# These are set/cleared by automations and should not be toggled manually.
+# Hiding prevents user confusion — they still work, just not visible in Helpers.
+# -----------------------------------------------------------------------------
+echo ""
+echo "🙈 Hiding internal state flag helpers..."
+
+SECRETS=/config/secrets.yaml
+HA_URL=$(grep "^ha_url:" $SECRETS 2>/dev/null | sed 's/ha_url: *//' | tr -d '"' || echo "http://localhost:8123")
+HA_TOKEN=$(grep "^ha_long_lived_token:" $SECRETS | sed 's/ha_long_lived_token: *//' | tr -d '"')
+
+if [ -z "$HA_TOKEN" ]; then
+    echo "   ⚠️  ha_long_lived_token not found in secrets.yaml — skipping auto-hide"
+    echo "   You can hide these manually via Settings → Entities → search → Hidden toggle:"
+fi
+
+hide_entity() {
+    local entity_id=$1
+    if [ -z "$HA_TOKEN" ]; then
+        echo "   - $entity_id"
+        return
+    fi
+    result=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH \
+        "$HA_URL/api/config/entity_registry/$entity_id" \
+        -H "Authorization: Bearer $HA_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{"hidden_by": "user"}')
+    if [ "$result" = "200" ]; then
+        echo "   ✅ Hidden: $entity_id"
+    else
+        echo "   ⚠️  Could not hide $entity_id (HTTP $result) — hide manually if needed"
+    fi
+}
+hide_entity "input_boolean.amber_grid_charging_active"
+hide_entity "input_boolean.amber_block_smart_shift_active"
+hide_entity "input_boolean.amber_force_export_active"
+hide_entity "input_boolean.amber_battery_offline"
+
 echo ""
 echo "============================================="
 echo " Checking configuration.yaml"
