@@ -431,7 +431,7 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 **💲 Amber**
 &nbsp;&nbsp;Buy **{{ (buy_price * 100) | round(0) | int }}c** &nbsp;&nbsp; Sell **{{ sell_display }}c** &nbsp;&nbsp; SOC **{{ soc | round(0) | int }}%**
 &nbsp;&nbsp;Import **${{ (import_cost / 100) | round(2) }}** &nbsp;&nbsp; Export **${{ (export_earnings / 100) | abs | round(2) }}** &nbsp;&nbsp; {{ '💰 Credit **$' ~ (total_earnings / 100) | round(2) ~ '**' if total_earnings > 0 else '💸 Expense **$' ~ ((total_earnings / 100) | abs) | round(2) ~ '**' if total_earnings < 0 else '**$0.00**' }}
-{{ '&nbsp;&nbsp;🚫 **Amber Battery Connection Offline** — check Amber app for details' if battery_offline else '' }}
+{{ '&nbsp;&nbsp;⚠️ **Amber Battery Connection Offline** — check Amber app for details' if battery_offline else '' }}
 &nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
 
 **🤖 Automations**

@@ -215,6 +215,28 @@ def update_ha_entity(ha_url, ha_token, entity_id, value, attributes=None):
         return json.loads(resp.read())
 
 
+def call_ha_service(ha_url, ha_token, domain, service, data):
+    """Calls a HA service via the REST API."""
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode    = ssl.CERT_NONE
+    req = urllib.request.Request(
+        f"{ha_url}/api/services/{domain}/{service}",
+        data=json.dumps(data).encode(),
+        headers={
+            "Authorization": f"Bearer {ha_token}",
+            "Content-Type":  "application/json"
+        },
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, context=ctx) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        print(f"Service call failed ({domain}.{service}): {e}")
+        return None
+
+
 def poll_live(id_token, site_id):
     """
     Polls the SmartShiftLive GraphQL query to get current prices and metrics.
@@ -312,12 +334,44 @@ def poll_live(id_token, site_id):
         "input_number.amber_battery_soc", soc,
         {"unit_of_measurement": "%", "friendly_name": "Amber Battery SOC"})
 
-    # Update battery online/offline state
-    # on = Amber can communicate with battery, off = communication error
+    # Battery offline detection — write input_boolean.amber_battery_offline
+    # True when stateOfChargePercentage is None (Amber comms error with battery)
+    # Read previous state first so we only notify on transitions, not every poll
+    battery_offline = not battery_online
+    offline_value   = "on" if battery_offline else "off"
+    try:
+        prev_req = urllib.request.Request(
+            f"{ha_url}/api/states/input_boolean.amber_battery_offline",
+            headers={"Authorization": f"Bearer {ha_token}"}
+        )
+        prev_ctx = ssl.create_default_context()
+        prev_ctx.check_hostname = False
+        prev_ctx.verify_mode    = ssl.CERT_NONE
+        with urllib.request.urlopen(prev_req, context=prev_ctx) as r:
+            prev_state   = json.loads(r.read()).get("state")
+            was_offline  = prev_state == "on"
+    except Exception:
+        was_offline = None  # Unknown — first run, skip notification
+
     update_ha_entity(ha_url, ha_token,
-        "binary_sensor.amber_battery_online",
-        "on" if battery_online else "off",
-        {"friendly_name": "Amber Battery Online", "device_class": "connectivity"})
+        "input_boolean.amber_battery_offline", offline_value,
+        {"friendly_name": "Amber Battery Offline"})
+
+    if battery_offline and was_offline is False:
+        print("WARNING: Battery comms OFFLINE — sending notification")
+        call_ha_service(ha_url, ha_token, "notify", "notification", {
+            "title": "⚠️ Amber Battery Connection Offline",
+            "message": "Amber cannot communicate with the battery. Check the Amber app for details. Will notify when connection is restored."
+        })
+    elif not battery_offline and was_offline is True:
+        print("Battery comms RESTORED — sending notification")
+        call_ha_service(ha_url, ha_token, "notify", "notification", {
+            "title": "✅ Amber Battery Connection Restored",
+            "message": "Amber battery communication has been restored."
+        })
+
+    if battery_offline:
+        print("WARNING: Battery offline — SOC and power readings unavailable")
 
     update_ha_entity(ha_url, ha_token,
         "input_number.amber_import_cost_cents", round(import_cost_cents, 4),
