@@ -51,9 +51,9 @@ Automation status icon legend:
 {% set grid_charging       = is_state('input_boolean.amber_grid_charging_active', 'on') %}
 {% set battery_offline     = is_state('input_boolean.amber_battery_offline', 'on') %}
 {# --- Icon logic: 🚫 disabled · 🟢 active · 🔴 enabled/waiting --- #}
-{% set ic_force_export = '🚫' if not en_force_export else ('🟢' if force_export_active else '🔴') %}
-{% set ic_block_ss     = '🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴') %}
-{% set ic_grid_charge  = '🚫' if not en_grid_charge  else ('🟢' if grid_charging        else '🔴') %}
+{% set ic_force_export = '⚠️' if (battery_offline and en_force_export) else ('🚫' if not en_force_export else ('🟢' if force_export_active else '🔴')) %}
+{% set ic_block_ss     = '⚠️' if (battery_offline and en_block_ss)     else ('🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴')) %}
+{% set ic_grid_charge  = '⚠️' if (battery_offline and en_grid_charge)  else ('🚫' if not en_grid_charge  else ('🟢' if grid_charging        else '🔴')) %}
 {% set ic_neg_notify   = '🚫' if not en_neg_notify   else '🟢' %}
 
 **💲 Amber**
