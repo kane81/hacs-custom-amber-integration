@@ -131,6 +131,10 @@
             - condition: state
               entity_id: input_boolean.amber_enable_block_smart_shift
               state: "on"
+            - condition: state
+              entity_id: input_boolean.amber_battery_offline
+              state: "off"
+              # Block if Amber cannot communicate with battery
           sequence:
             - service: shell_command.amber_smartshift_off
               response_variable: cmd_result

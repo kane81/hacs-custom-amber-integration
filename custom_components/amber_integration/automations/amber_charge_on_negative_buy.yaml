@@ -84,6 +84,10 @@
       to: "off"
       id: disabled
   condition:
+    - condition: state
+      entity_id: input_boolean.amber_battery_offline
+      state: "off"
+      # Block all battery commands if Amber cannot communicate with battery
     - condition: template
       value_template: "{{ states('input_number.amber_general_price_actual') not in ['unknown', 'unavailable'] }}"
     # Window check and enable check skipped for window_end and disabled — they always need to run cleanup
