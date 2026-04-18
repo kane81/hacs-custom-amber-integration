@@ -71,6 +71,38 @@ cp -v $SRC/templates/amber.yaml /config/templates/
 
 
 # -----------------------------------------------------------------------------
+# Set automation enable booleans to OFF on first install
+# Without initial: set, HA defaults input_boolean to on if no stored state.
+# The script explicitly sets them off so users must consciously enable each one.
+# On subsequent restarts HA restores the user's last set value instead.
+# -----------------------------------------------------------------------------
+echo ""
+echo "🔧 Setting automation enable booleans to OFF..."
+
+set_boolean_off() {
+    local entity_id=$1
+    if [ -z "$HA_TOKEN" ]; then
+        echo "   - $entity_id (skipped — no token yet)"
+        return
+    fi
+    result=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+        "$HA_URL/api/services/input_boolean/turn_off" \
+        -H "Authorization: Bearer $HA_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "{\"entity_id\": \"$entity_id\"}")
+    if [ "$result" = "200" ]; then
+        echo "   ✅ OFF: $entity_id"
+    else
+        echo "   ⚠️  Could not set $entity_id (HTTP $result)"
+    fi
+}
+
+set_boolean_off "input_boolean.amber_enable_block_smart_shift"
+set_boolean_off "input_boolean.amber_enable_charge_on_negative_buy"
+set_boolean_off "input_boolean.amber_enable_force_export_custom_fit"
+set_boolean_off "input_boolean.amber_enable_negative_price_notify"
+
+# -----------------------------------------------------------------------------
 # Hide internal state flag helpers from the HA UI
 # These are set/cleared by automations and should not be toggled manually.
 # Hiding prevents user confusion — they still work, just not visible in Helpers.
