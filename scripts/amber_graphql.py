@@ -316,6 +316,34 @@ def poll_live(id_token, site_id):
 
     if not ha_token:
         print("ERROR: ha_long_lived_token not found in secrets.yaml")
+        print("       Add it to /config/secrets.yaml:")
+        print("       ha_long_lived_token: your_token_here")
+        print("       Get a token from: HA Profile → Long-Lived Access Tokens → Create Token")
+        sys.exit(1)
+
+    # Validate token before making any HA calls
+    try:
+        ctx_test = ssl.create_default_context()
+        ctx_test.check_hostname = False
+        ctx_test.verify_mode    = ssl.CERT_NONE
+        test_req = urllib.request.Request(
+            f"{ha_url}/api/",
+            headers={"Authorization": f"Bearer {ha_token}"}
+        )
+        with urllib.request.urlopen(test_req, context=ctx_test) as r:
+            if r.status != 200:
+                raise ValueError("Non-200 response")
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            print("ERROR: HA token is invalid or expired (HTTP 401 Unauthorized)")
+            print("       Check ha_long_lived_token in /config/secrets.yaml")
+            print("       Get a new token from: HA Profile → Long-Lived Access Tokens → Create Token")
+            sys.exit(1)
+        raise
+    except Exception as e:
+        print(f"ERROR: Cannot connect to Home Assistant at {ha_url}")
+        print(f"       Check ha_url in /config/secrets.yaml (default: http://localhost:8123)")
+        print(f"       Details: {e}")
         sys.exit(1)
 
     update_ha_entity(ha_url, ha_token,

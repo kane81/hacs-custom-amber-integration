@@ -85,15 +85,30 @@ This project uses Amber Electric's internal API which is not publicly documented
 | **Price Notifications** | Alerts when buy price goes negative and when it recovers |
 | **Battery Offline Detection** | Detects when Amber cannot communicate with the battery — notifies once when offline and again when restored. Shows a warning on the dashboard card. |
 
-All optional automations are **off by default** — enable them individually from Settings → Helpers once you are confident the integration is working correctly.
+All optional automations are **off by default** — enable them individually via the dashboard card or Overview → Devices → Helpers once you are confident the integration is working correctly.
 
 ---
 
 ## Installation
 
-### Step 0 — Install Required Add-ons
+### Step 0 — Install Prerequisites
 
-Before starting you need two add-ons from the **official Home Assistant Add-on Store** — no HACS or third-party repositories required.
+#### Install HACS (if not already installed)
+
+HACS (Home Assistant Community Store) is required to install this integration. If it is already in your sidebar, skip ahead to Step 0b.
+
+1. Go to **Settings → Add-ons → Add-on Store**
+2. Click **⋮** (top right) → **Custom repositories**
+3. Paste: `https://github.com/hacs/addons` → Category: **Add-on** → **Add**
+4. Search for **HACS** → **Install**
+5. Go to the **Info** tab → **Start** → **Restart Home Assistant** when prompted
+6. After restart go to **Settings → Devices & Services → Add Integration**
+7. Search for **HACS** → follow the setup steps (requires a GitHub account)
+8. Once configured, **HACS** will appear in your left sidebar
+
+#### Step 0b — Install Required Add-ons
+
+You also need two add-ons from the **official Home Assistant Add-on Store**.
 
 Open: **Settings → Add-ons → Add-on Store**
 
@@ -107,7 +122,7 @@ Used to edit `configuration.yaml` and `secrets.yaml` directly in your browser. R
 
 #### Terminal & SSH — command line
 
-Used to install pycognito, run the install script, and test authentication. Required for Steps 1, 4 and 5.
+Used to run the install script and test authentication. Required for Steps 1, 4 and 5.
 
 1. Search for `Terminal & SSH` → **Install**
 2. Go to the **Configuration** tab → click **Show unused optional configuration options** → expand **ssh** → set a username and password — **this is required or the add-on will not start**
@@ -190,6 +205,8 @@ smtp_password: "your-app-password"
 
 Save with **Ctrl+S**.
 
+> **No restart needed for secrets.yaml** — the scripts read `secrets.yaml` directly every time they run. You can edit credentials and immediately re-run the script without restarting HA.
+
 **Getting your HA long-lived access token:**
 1. Click your profile avatar (bottom left sidebar)
 2. Scroll to **Long-Lived Access Tokens** → **Create Token**
@@ -262,36 +279,52 @@ This is intentional. Keeping them as separate files means HACS updates automatic
 
 ---
 
-## Enabling Optional Automations
+## Controlling Automations
 
-Optional automations are **off by default**. Enable them via **Settings → Helpers** when you are ready:
+The automations in **Settings → Automations** should always remain enabled — do not disable them there. Instead their behaviour is controlled via toggle helpers found at Overview → Devices → Helpers.
 
-| Helper | Enables | Default |
+Each optional automation has a corresponding **Enable Automation** toggle. When the toggle is OFF the automation is loaded and running but will immediately exit without doing anything. This approach is used instead of HA's built-in automation toggle because the built-in toggle can reset unexpectedly on restart.
+
+### How to enable/disable an automation
+
+The easiest path is:
+
+1. Go to your **Overview** dashboard
+2. Tap **Devices** (top right)
+3. Select the **Helpers** tab
+4. Find the **Enable Automation: xyz** toggle and turn it on or off
+
+> **Tip:** The dashboard card shows the live state of all automations at a glance using icon indicators — 🟢 active · 🔴 enabled/waiting · 🚫 disabled · ⚠️ blocked. This is the easiest way to see what is on without navigating to Helpers. The full helper names are listed in the table below in case the description is cut off in the UI.
+
+| Toggle | Controls | Default |
 |---|---|---|
-| `amber_enable_block_smart_shift` | Block Smart Shift Overnight | OFF |
-| `amber_enable_charge_on_negative_buy` | Grid Charge on Negative Buy Price | OFF |
-| `amber_enable_force_export_custom_fit` | Force Export at Custom FiT | OFF |
-| `amber_enable_negative_price_notify` | Negative Price Notification | OFF |
-
-To toggle: go to **Settings → Helpers**, find the helper by name and click the toggle.
+| `Enable Automation: Block Smart Shift` | Disables Smart Shift overnight to preserve battery | OFF |
+| `Enable Automation: Charge on Negative Buy` | Charges battery from grid when buy price goes negative | OFF |
+| `Enable Automation: Force Export Custom FiT` | Discharges battery to grid at high sell prices | OFF |
+| `Enable Automation: Negative Price Notify` | Sends notification when buy price goes negative | OFF |
 
 ---
 
 ## Testing the Integration
 
-Before enabling optional automations it is worth verifying the integration is working correctly end to end.
+Before enabling optional automations verify the integration is working correctly end to end.
 
-### Verify price polling is working
+### Step 1 — Set up the dashboard card
+
+Add the dashboard card first so you can see live prices and automation states at a glance — this makes all subsequent testing much easier.
+
+See the **Dashboard Card** section below for setup instructions. Once added the card will show live Amber prices updating every 5 minutes and all automation toggle states.
+
+### Step 2 — Verify price polling is working
 
 1. Go to **Settings → Automations** and confirm **Amber Price Poller** is listed
-2. Go to **Developer Tools → States** and search for `amber_general_price_actual`
-3. The state should show a current price value and `amber_last_polled` should show a recent timestamp
-4. If values are 0 or stale, run manually in Terminal:
+2. Check the dashboard card — buy and sell prices should be updating every 5 minutes
+3. If prices are 0 or stale, run manually in Terminal:
    ```bash
    python3 /config/scripts/amber_graphql.py live
    ```
 
-### Test Smart Shift control (recommended before enabling automations)
+### Step 3 — Test Smart Shift control
 
 This confirms your credentials are correct and the API can actually control your battery.
 
@@ -306,23 +339,18 @@ This confirms your credentials are correct and the API can actually control your
    ```
 4. Check the Amber app again — Smart Shift should show as **enabled**
 
-If both steps work correctly your credentials and API connection are good and it is safe to enable the automations.
+If both steps work your credentials and API connection are good and it is safe to enable automations.
 
-### Enable your first automation
+### Step 4 — Enable your first automation
 
-Start with just one automation to verify it behaves as expected before enabling others:
+Start with just one to verify it behaves as expected before enabling others.
 
-1. Go to **Settings → Helpers**
-2. Find `amber_enable_negative_price_notify` and toggle it **ON**
-3. This automation sends a notification when buy price goes negative — low risk, no battery control
-4. Monitor it for a day or two before enabling the battery control automations
+Go to **Overview → Devices → Helpers** and turn on **Enable Automation: Negative Price Notify** first — it sends a notification when buy price goes negative and has no battery control, so it's safe to test with.
 
-When you are ready to enable battery control:
-- `amber_enable_force_export_custom_fit` — discharges battery at high sell prices
-- `amber_enable_charge_on_negative_buy` — charges battery when buy price goes negative
-- `amber_enable_block_smart_shift` — disables Smart Shift overnight
-
-> ⚠️ Remember: all automation toggles reset to OFF every time HA restarts. You will need to re-enable them after each restart.
+Watch the dashboard card — the Negative Price Notify row will show 🟢 when active. Monitor it for a day or two, then enable the battery control automations when ready:
+- **Enable Automation: Force Export Custom FiT** — discharges battery at high sell prices
+- **Enable Automation: Charge on Negative Buy** — charges battery when buy price goes negative
+- **Enable Automation: Block Smart Shift** — disables Smart Shift overnight
 
 ---
 
@@ -338,9 +366,9 @@ All settings can be changed without editing any YAML files. Changes to price thr
 4. Search for the helper you want to change (e.g. `amber_min_sell_price`)
 5. Click it and update the value
 
-### Option B — Settings → Helpers
+### Option B — Overview → Devices → Helpers
 
-**Settings → Helpers** → find helper by name → click to edit.
+**Overview → Devices → Helpers** → find helper by name → click to edit.
 
 ### Time Windows
 
@@ -382,7 +410,7 @@ The install script hides these automatically using the HA entity registry API. I
 3. Click the entity → click the **⚙️ cog icon**
 4. Toggle **Hidden** to on → **Update**
 
-Hidden helpers still function normally — automations can still read and write them. They just won't appear in Settings → Helpers or on dashboards.
+Hidden helpers still function normally — automations can still read and write them. They just won't appear in Overview → Devices → Helpers or on dashboards.
 
 ---
 
@@ -492,7 +520,7 @@ python3 /config/scripts/amber_auth.py                  # manually refresh auth t
 
 **Prices not updating** — check the `Amber Price Poller` automation trace in Settings → Automations. Run `python3 /config/scripts/amber_graphql.py live` to test manually.
 
-**Optional automation not firing** — confirm its enable boolean is ON in Settings → Helpers. Check the automation trace — the condition block shows exactly why it exited early.
+**Optional automation not firing** — confirm its enable toggle is ON in Overview → Devices → Helpers. Check the automation trace — the condition block shows exactly why it exited early.
 
 **notify.notification unknown action error** — the package hasn't loaded yet. Reload: Developer Tools → YAML → Reload All.
 
