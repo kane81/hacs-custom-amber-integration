@@ -10,6 +10,7 @@
 #   bash /config/custom_components/amber_integration/install.sh
 #
 # Safe to re-run — existing files are overwritten, nothing is deleted.
+# User-configured helper values are never overwritten on update.
 # =============================================================================
 
 set -e
@@ -41,7 +42,7 @@ fi
 echo "   pip3 found"
 echo ""
 
-# Install pycognito Python dependency
+# Install pycognito
 echo "🐍 Installing pycognito..."
 pip3 install pycognito --break-system-packages
 echo ""
@@ -69,62 +70,90 @@ echo "📄 Copying templates..."
 mkdir -p /config/templates
 cp -v $SRC/templates/amber.yaml /config/templates/
 
+# -----------------------------------------------------------------------------
+# Load HA credentials — needed for all API calls below
+# -----------------------------------------------------------------------------
+SECRETS=/config/secrets.yaml
+HA_URL=$(grep "^ha_url:" $SECRETS 2>/dev/null | sed 's/ha_url: *//' | tr -d '"' || echo "http://localhost:8123")
+HA_TOKEN=$(grep "^ha_long_lived_token:" $SECRETS 2>/dev/null | sed 's/ha_long_lived_token: *//' | tr -d '"')
+
+if [ -z "$HA_TOKEN" ]; then
+    echo ""
+    echo "⚠️  ha_long_lived_token not found in secrets.yaml"
+    echo "   Skipping helper configuration — run install.sh again after adding your token."
+fi
 
 # -----------------------------------------------------------------------------
-# Set automation enable booleans to OFF on first install
-# Without initial: set, HA defaults input_boolean to on if no stored state.
-# The script explicitly sets them off so users must consciously enable each one.
-# On subsequent restarts HA restores the user's last set value instead.
+# Helper functions
 # -----------------------------------------------------------------------------
-echo ""
-echo "🔧 Setting automation enable booleans to OFF..."
 
-set_boolean_off() {
+get_state() {
     local entity_id=$1
-    if [ -z "$HA_TOKEN" ]; then
-        echo "   - $entity_id (skipped — no token yet)"
-        return
-    fi
-    result=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-        "$HA_URL/api/services/input_boolean/turn_off" \
-        -H "Authorization: Bearer $HA_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{\"entity_id\": \"$entity_id\"}")
-    if [ "$result" = "200" ]; then
-        echo "   ✅ OFF: $entity_id"
+    [ -z "$HA_TOKEN" ] && echo "" && return
+    curl -s \
+        "$HA_URL/api/states/$entity_id" \
+        -H "Authorization: Bearer $HA_TOKEN" | \
+        python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('state',''))" 2>/dev/null || echo ""
+}
+
+set_number_if_default() {
+    local entity_id=$1
+    local default_value=$2
+    local description=$3
+    [ -z "$HA_TOKEN" ] && echo "   - $entity_id (skipped — no token)" && return
+
+    current=$(get_state "$entity_id")
+    if [ -z "$current" ] || [ "$current" = "unavailable" ] || [ "$current" = "unknown" ]; then
+        curl -s -o /dev/null -X POST \
+            "$HA_URL/api/services/input_number/set_value" \
+            -H "Authorization: Bearer $HA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"entity_id\": \"$entity_id\", \"value\": $default_value}"
+        echo "   ✅ $description set to $default_value (first install default)"
     else
-        echo "   ⚠️  Could not set $entity_id (HTTP $result)"
+        echo "   ⏭️  $description already set to $current — keeping user value"
     fi
 }
 
-set_boolean_off "input_boolean.amber_enable_block_smart_shift"
-set_boolean_off "input_boolean.amber_enable_charge_on_negative_buy"
-set_boolean_off "input_boolean.amber_enable_force_export_custom_fit"
-set_boolean_off "input_boolean.amber_enable_negative_price_notify"
+set_datetime_if_default() {
+    local entity_id=$1
+    local default_value=$2
+    local description=$3
+    [ -z "$HA_TOKEN" ] && echo "   - $entity_id (skipped — no token)" && return
 
-# -----------------------------------------------------------------------------
-# Hide internal state flag helpers from the HA UI
-# These are set/cleared by automations and should not be toggled manually.
-# Hiding prevents user confusion — they still work, just not visible in Helpers.
-# -----------------------------------------------------------------------------
-echo ""
-echo "🙈 Hiding internal state flag helpers..."
+    current=$(get_state "$entity_id")
+    if [ -z "$current" ] || [ "$current" = "unavailable" ] || [ "$current" = "unknown" ]; then
+        curl -s -o /dev/null -X POST \
+            "$HA_URL/api/services/input_datetime/set_datetime" \
+            -H "Authorization: Bearer $HA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"entity_id\": \"$entity_id\", \"time\": \"$default_value\"}"
+        echo "   ✅ $description set to $default_value (first install default)"
+    else
+        echo "   ⏭️  $description already set to $current — keeping user value"
+    fi
+}
 
-SECRETS=/config/secrets.yaml
-HA_URL=$(grep "^ha_url:" $SECRETS 2>/dev/null | sed 's/ha_url: *//' | tr -d '"' || echo "http://localhost:8123")
-HA_TOKEN=$(grep "^ha_long_lived_token:" $SECRETS | sed 's/ha_long_lived_token: *//' | tr -d '"')
+set_boolean_off_if_new() {
+    local entity_id=$1
+    [ -z "$HA_TOKEN" ] && echo "   - $entity_id (skipped — no token)" && return
 
-if [ -z "$HA_TOKEN" ]; then
-    echo "   ⚠️  ha_long_lived_token not found in secrets.yaml — skipping auto-hide"
-    echo "   You can hide these manually via Settings → Entities → search → Hidden toggle:"
-fi
+    current=$(get_state "$entity_id")
+    if [ -z "$current" ] || [ "$current" = "unavailable" ] || [ "$current" = "unknown" ]; then
+        curl -s -o /dev/null -X POST \
+            "$HA_URL/api/services/input_boolean/turn_off" \
+            -H "Authorization: Bearer $HA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"entity_id\": \"$entity_id\"}"
+        echo "   ✅ OFF: $entity_id (first install default)"
+    else
+        echo "   ⏭️  $entity_id already $current — keeping user value"
+    fi
+}
 
 hide_entity() {
     local entity_id=$1
-    if [ -z "$HA_TOKEN" ]; then
-        echo "   - $entity_id"
-        return
-    fi
+    [ -z "$HA_TOKEN" ] && echo "   - $entity_id (skipped — no token)" && return
     result=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH \
         "$HA_URL/api/config/entity_registry/$entity_id" \
         -H "Authorization: Bearer $HA_TOKEN" \
@@ -133,9 +162,40 @@ hide_entity() {
     if [ "$result" = "200" ]; then
         echo "   ✅ Hidden: $entity_id"
     else
-        echo "   ⚠️  Could not hide $entity_id (HTTP $result) — hide manually if needed"
+        echo "   ⚠️  Could not hide $entity_id (HTTP $result)"
     fi
 }
+
+# -----------------------------------------------------------------------------
+# Set automation enable booleans to OFF (first install only)
+# -----------------------------------------------------------------------------
+echo ""
+echo "🔧 Setting automation enable booleans..."
+set_boolean_off_if_new "input_boolean.amber_enable_block_smart_shift"
+set_boolean_off_if_new "input_boolean.amber_enable_charge_on_negative_buy"
+set_boolean_off_if_new "input_boolean.amber_enable_force_export_custom_fit"
+set_boolean_off_if_new "input_boolean.amber_enable_negative_price_notify"
+
+# -----------------------------------------------------------------------------
+# Set default values for configurable helpers (first install only)
+# On HACS updates these are skipped — user values are preserved
+# -----------------------------------------------------------------------------
+echo ""
+echo "🔧 Setting default values for configurable helpers..."
+set_number_if_default   "input_number.amber_min_sell_price"                  0.15     "Min Sell Price"
+set_number_if_default   "input_number.amber_min_soc_to_sell"                 10       "Min SOC to Sell"
+set_datetime_if_default "input_datetime.amber_charge_on_negative_start"      "10:00:00" "Charge on Negative Start"
+set_datetime_if_default "input_datetime.amber_charge_on_negative_end"        "17:00:00" "Charge on Negative End"
+set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_start" "16:00:00" "Force Sell Start"
+set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_end"  "06:00:00" "Force Sell End"
+set_datetime_if_default "input_datetime.amber_block_smart_shift_start"       "00:00:00" "Block Smart Shift Start"
+set_datetime_if_default "input_datetime.amber_block_smart_shift_end"         "06:00:00" "Block Smart Shift End"
+
+# -----------------------------------------------------------------------------
+# Hide internal state flag helpers from the HA UI
+# -----------------------------------------------------------------------------
+echo ""
+echo "🙈 Hiding internal state flag helpers..."
 hide_entity "input_boolean.amber_grid_charging_active"
 hide_entity "input_boolean.amber_block_smart_shift_active"
 hide_entity "input_boolean.amber_force_export_active"
@@ -147,7 +207,6 @@ echo " Checking configuration.yaml"
 echo "============================================="
 echo ""
 
-# Check automation dir merge line
 if grep -q "include_dir_merge_list automations" $CONFIG; then
     echo "✅ automation: !include_dir_merge_list automations/ — found"
 else
@@ -161,7 +220,6 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
-# Check packages line
 if grep -q "include_dir_named packages" $CONFIG; then
     echo "✅ packages: !include_dir_named packages/ — found"
 else
@@ -182,8 +240,8 @@ if [ $ERRORS -eq 0 ]; then
     echo " Reload HA config to apply changes:"
     echo " Developer Tools → YAML → Reload All"
     echo ""
-    echo " ⚡ Future HACS updates will run this script"
-    echo "    automatically via amber_hacs_auto_install."
+    echo " ⚡ Future HACS updates will run this script automatically"
+    echo "    via the amber_hacs_auto_install automation."
 else
     echo " ⚠️  Install complete with $ERRORS warning(s) above."
     echo ""
