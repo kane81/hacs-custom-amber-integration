@@ -142,6 +142,7 @@
         ss_blocked:     "{{ is_state('input_boolean.amber_block_smart_shift_active', 'on') }}"
         active:         "{{ is_state('input_boolean.amber_force_export_active', 'on') }}"
         enabled:        "{{ is_state('input_boolean.amber_enable_force_export_custom_fit', 'on') }}"
+        notify_enabled: "{{ is_state('input_boolean.amber_enable_force_export_notify', 'on') }}"
 
     - choose:
 
@@ -157,12 +158,16 @@
             - service: input_boolean.turn_off
               target:
                 entity_id: input_boolean.amber_force_export_active
-            - service: notify.notification
-              data:
-                title: "Amber Force Export Cancelled - Automation Disabled"
-                message: >
-                  Force Export automation was disabled while a session was active.
-                  Discharge override cancelled. Smart Shift restored.
+            - if:
+                - condition: template
+                  value_template: "{{ notify_enabled }}"
+              then:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Export Cancelled - Automation Disabled"
+                    message: >
+                      Force Export automation was disabled while a session was active.
+                      Discharge override cancelled. Smart Shift restored.
 
         # Window ended with active session - cancel override and clear flag
         - conditions:
@@ -176,20 +181,28 @@
             - service: input_boolean.turn_off
               target:
                 entity_id: input_boolean.amber_force_export_active
-            - service: notify.notification
-              data:
-                title: "Amber Force Export Ended - Window Closed"
-                message: >
-                  Force export window ended. Override cancelled. Smart Shift restored.
+            - if:
+                - condition: template
+                  value_template: "{{ notify_enabled }}"
+              then:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Export Ended - Window Closed"
+                    message: >
+                      Force export window ended. Override cancelled. Smart Shift restored.
 
         # Smart Shift blocked - notify once (only if would otherwise start)
         - conditions:
             - condition: template
               value_template: "{{ enabled and ss_blocked and sell_price >= min_sell_price and soc >= min_soc and not active }}"
           sequence:
-            - service: notify.notification
-              data:
-                title: "Amber Force Export Skipped - Smart Shift Blocked"
+            - if:
+                - condition: template
+                  value_template: "{{ notify_enabled }}"
+              then:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Export Skipped - Smart Shift Blocked"
                 message: >
                   Sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh which is at or above
                   the threshold of {{ (min_sell_price * 100) | round(0) | int }}c/kWh, but
@@ -212,17 +225,25 @@
                 - service: input_boolean.turn_on
                   target:
                     entity_id: input_boolean.amber_force_export_active
-                - service: notify.notification
-                  data:
-                    title: "Amber Force Export Started"
+                - if:
+                    - condition: template
+                      value_template: "{{ notify_enabled }}"
+                  then:
+                    - service: notify.notification
+                      data:
+                        title: "Amber Force Export Started"
                     message: >
                       Effective sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh
                       (threshold: {{ (min_sell_price * 100) | round(0) | int }}c/kWh).
                       SOC is {{ soc | round(0) | int }}%. Export started.
               else:
-                - service: notify.notification
-                  data:
-                    title: "Amber Force Export Failed"
+                - if:
+                    - condition: template
+                      value_template: "{{ notify_enabled }}"
+                  then:
+                    - service: notify.notification
+                      data:
+                        title: "Amber Force Export Failed"
                     message: >
                       Failed to start force export via Amber API.
                       Return code: {{ cmd_result.returncode }}
@@ -249,9 +270,13 @@
             - service: input_boolean.turn_off
               target:
                 entity_id: input_boolean.amber_force_export_active
-            - service: notify.notification
-              data:
-                title: "Amber Force Export Ended"
+            - if:
+                - condition: template
+                  value_template: "{{ notify_enabled }}"
+              then:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Export Ended"
                 message: >
                   {% if ss_blocked %}
                   Smart Shift was blocked — export cannot continue.

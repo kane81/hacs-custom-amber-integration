@@ -301,6 +301,7 @@ The easiest path is:
 | `Enable Automation: Block Smart Shift` | Disables Smart Shift overnight to preserve battery | OFF |
 | `Enable Automation: Charge on Negative Buy` | Charges battery from grid when buy price goes negative | OFF |
 | `Enable Automation: Force Export Custom FiT` | Discharges battery to grid at high sell prices | OFF |
+| `Enable Automation: Force Export Notifications` | Sends notifications when force export starts/stops/fails | ON |
 | `Enable Automation: Negative Price Notify` | Sends notification when buy price goes negative | OFF |
 
 ---

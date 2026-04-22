@@ -176,6 +176,24 @@ set_boolean_off_if_new "input_boolean.amber_enable_charge_on_negative_buy"
 set_boolean_off_if_new "input_boolean.amber_enable_force_export_custom_fit"
 set_boolean_off_if_new "input_boolean.amber_enable_negative_price_notify"
 
+# Force export notifications default ON
+set_boolean_on_if_new() {
+    local entity_id=$1
+    [ -z "$HA_TOKEN" ] && echo "   - $entity_id (skipped — no token)" && return
+    current=$(get_state "$entity_id")
+    if [ -z "$current" ] || [ "$current" = "unavailable" ] || [ "$current" = "unknown" ]; then
+        curl -s -o /dev/null -X POST \
+            "$HA_URL/api/services/input_boolean/turn_on" \
+            -H "Authorization: Bearer $HA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"entity_id\": \"$entity_id\"}"
+        echo "   ✅ ON: $entity_id (first install default)"
+    else
+        echo "   ⏭️  $entity_id already $current — keeping user value"
+    fi
+}
+set_boolean_on_if_new "input_boolean.amber_enable_force_export_notify"
+
 # -----------------------------------------------------------------------------
 # Set default values for configurable helpers (first install only)
 # On HACS updates these are skipped — user values are preserved

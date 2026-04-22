@@ -265,6 +265,13 @@ input_boolean:
     # From then on HA remembers whatever the user last set.
     icon: mdi:transmission-tower-export
 
+  amber_enable_force_export_notify:
+    name: "Enable Automation: Force Export Notifications"
+    # No initial: — HA restores last known state on restart.
+    # On first install defaults to ON (notifications enabled).
+    # Turn OFF via Overview → Devices → Helpers to silence force export alerts.
+    icon: mdi:bell-outline
+
   amber_enable_negative_price_notify:
     name: "Enable Automation: Negative Price Notify"
     # No initial: — HA restores last known state on restart.
