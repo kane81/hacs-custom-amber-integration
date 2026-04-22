@@ -203,11 +203,11 @@
                 - service: notify.notification
                   data:
                     title: "Amber Force Export Skipped - Smart Shift Blocked"
-                message: >
-                  Sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh which is at or above
-                  the threshold of {{ (min_sell_price * 100) | round(0) | int }}c/kWh, but
-                  Smart Shift is currently disabled by the overnight block automation.
-                  Smart Shift will be re-enabled at the end of the overnight window.
+                    message: >
+                      Sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh which is at or above
+                      the threshold of {{ (min_sell_price * 100) | round(0) | int }}c/kWh, but
+                      Smart Shift is currently disabled by the overnight block automation.
+                      Smart Shift will be re-enabled at the end of the overnight window.
 
         # START - conditions met, not yet active
         - conditions:
@@ -232,10 +232,10 @@
                     - service: notify.notification
                       data:
                         title: "Amber Force Export Started"
-                    message: >
-                      Effective sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh
-                      (threshold: {{ (min_sell_price * 100) | round(0) | int }}c/kWh).
-                      SOC is {{ soc | round(0) | int }}%. Export started.
+                        message: >
+                          Effective sell price is {{ (sell_price * 100) | round(0) | int }}c/kWh
+                          (threshold: {{ (min_sell_price * 100) | round(0) | int }}c/kWh).
+                          SOC is {{ soc | round(0) | int }}%. Export started.
               else:
                 - if:
                     - condition: template
@@ -244,11 +244,11 @@
                     - service: notify.notification
                       data:
                         title: "Amber Force Export Failed"
-                    message: >
-                      Failed to start force export via Amber API.
-                      Return code: {{ cmd_result.returncode }}
-                      stdout: {{ cmd_result.stdout }}
-                      stderr: {{ cmd_result.stderr }}
+                        message: >
+                          Failed to start force export via Amber API.
+                          Return code: {{ cmd_result.returncode }}
+                          stdout: {{ cmd_result.stdout }}
+                          stderr: {{ cmd_result.stderr }}
 
         # MAINTAIN - conditions still met, already active (silent re-issue)
         - conditions:
@@ -277,14 +277,14 @@
                 - service: notify.notification
                   data:
                     title: "Amber Force Export Ended"
-                message: >
-                  {% if ss_blocked %}
-                  Smart Shift was blocked — export cannot continue.
-                  {% elif sell_price < min_sell_price %}
-                  Sell price dropped to {{ (sell_price * 100) | round(0) | int }}c/kWh
-                  (threshold: {{ (min_sell_price * 100) | round(0) | int }}c/kWh).
-                  {% else %}
-                  Battery SOC reached {{ soc | round(1) }}%
-                  (minimum: {{ min_soc | round(0) | int }}%).
-                  {% endif %}
-                  Override cancelled. Smart Shift restored.
+                    message: >
+                      {% if ss_blocked %}
+                      Smart Shift was blocked — export cannot continue.
+                      {% elif sell_price < min_sell_price %}
+                      Sell price dropped to {{ (sell_price * 100) | round(0) | int }}c/kWh
+                      (threshold: {{ (min_sell_price * 100) | round(0) | int }}c/kWh).
+                      {% else %}
+                      Battery SOC reached {{ soc | round(1) }}%
+                      (minimum: {{ min_soc | round(0) | int }}%).
+                      {% endif %}
+                      Override cancelled. Smart Shift restored.

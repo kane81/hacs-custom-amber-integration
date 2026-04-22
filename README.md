@@ -364,7 +364,7 @@ All settings can be changed without editing any YAML files. Changes to price thr
 1. Go to your **Overview** dashboard
 2. Click **Devices & Services** (top right corner button)
 3. Select the **Helpers** tab
-4. Search for the helper you want to change (e.g. `amber_min_sell_price`)
+4. Search for the helper you want to change (e.g. **Amber Min Sell Price**)
 5. Click it and update the value
 
 ### Option B — Overview → Devices → Helpers
@@ -375,19 +375,19 @@ All settings can be changed without editing any YAML files. Changes to price thr
 
 | Helper | Default | Purpose |
 |---|---|---|
-| `amber_charge_on_negative_start` | 10:00 | Start of negative price monitoring window |
-| `amber_charge_on_negative_end` | 17:00 | End of negative price monitoring window |
-| `amber_force_sell_on_custom_fit_start` | 16:00 | Start of force export window |
-| `amber_force_sell_on_custom_fit_end` | 06:00 | End of force export window (overnight) |
-| `amber_block_smart_shift_start` | 00:00 | Start of Smart Shift block window |
-| `amber_block_smart_shift_end` | 06:00 | End of Smart Shift block window |
+| **Amber Charge on Negative Start** | 10:00 | Start of negative price monitoring window |
+| **Amber Charge on Negative End** | 17:00 | End of negative price monitoring window |
+| **Amber Force Sell Start** | 16:00 | Start of force export window |
+| **Amber Force Sell End** | 06:00 | End of force export window (overnight) |
+| **Amber Block Smart Shift Start** | 00:00 | Start of Smart Shift block window |
+| **Amber Block Smart Shift End** | 06:00 | End of Smart Shift block window |
 
 ### Price Thresholds
 
 | Helper | Default | Purpose |
 |---|---|---|
-| `amber_min_sell_price` | $0.15/kWh | Minimum sell price to trigger force export |
-| `amber_min_soc_to_sell` | 10% | Minimum battery SOC before stopping export |
+| **Amber Min Sell Price** | $0.15/kWh | Minimum sell price to trigger force export |
+| **Amber Min SOC to Sell** | 10% | Minimum battery SOC before stopping export |
 
 ---
 
