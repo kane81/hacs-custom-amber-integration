@@ -143,11 +143,7 @@ input_number:
     min: 0
     max: 1
     step: 0.01
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: 0.15
+    # No initial: — HA restores the last value you set.
     unit_of_measurement: $/kWh
 
   amber_min_soc_to_sell:
@@ -155,11 +151,7 @@ input_number:
     min: 0
     max: 100
     step: 1
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: 10
+    # No initial: — HA restores the last value you set.
     unit_of_measurement: "%"
 
 
@@ -178,61 +170,37 @@ input_datetime:
     name: Amber Charge on Negative Start
     has_date: false
     has_time: true
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: "10:00:00"
+    # No initial: — HA restores the last value you set.
 
   amber_charge_on_negative_end:
     name: Amber Charge on Negative End
     has_date: false
     has_time: true
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: "17:00:00"
+    # No initial: — HA restores the last value you set.
 
   amber_force_sell_on_custom_fit_start:
     name: Amber Force Sell Start
     has_date: false
     has_time: true
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: "16:00:00"
+    # No initial: — HA restores the last value you set.
 
   amber_force_sell_on_custom_fit_end:
     name: Amber Force Sell End
     has_date: false
     has_time: true
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: "06:00:00"
+    # No initial: — HA restores the last value you set.
 
   amber_block_smart_shift_start:
     name: Amber Block Smart Shift Start
     has_date: false
     has_time: true
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: "00:00:00"
+    # No initial: — HA restores the last value you set.
 
   amber_block_smart_shift_end:
     name: Amber Block Smart Shift End
     has_date: false
     has_time: true
-    # ⚠️ After your first HA restart, remove the initial: line below.
-    # With initial: present HA resets this value on every restart, wiping
-    # any changes you made via Settings → Helpers.
-    # Without initial: HA restores the last value you set.
-    initial: "06:00:00"
+    # No initial: — HA restores the last value you set.
 
 ################################################################################
 # Input Booleans
@@ -300,6 +268,7 @@ input_boolean:
     # initial: false is intentional — this is a session state flag
     # that must always reset to off on restart. Do NOT remove initial:.
     name: Amber Force Export Active
+    initial: false
     icon: mdi:transmission-tower-export
 
   # True when Amber cannot communicate with the battery
