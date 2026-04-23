@@ -31,7 +31,7 @@
       to: "off"
       id: hacs_update
   action:
-    - delay: "00:00:10"
+    - delay: "00:01:00"
     - choose:
         # Startup — sync mode (fast, no pip)
         - conditions:

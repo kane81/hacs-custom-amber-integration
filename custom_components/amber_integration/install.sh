@@ -203,9 +203,10 @@ set_boolean_on_if_new() {
 set_boolean_on_if_new "input_boolean.amber_enable_force_export_notify"
 
 # -----------------------------------------------------------------------------
-# Set default values for configurable helpers (first install only)
-# On HACS updates these are skipped — user values are preserved
+# Set default values for configurable helpers (first install / full mode only)
+# Skipped on startup sync to avoid overwriting user values during HA boot
 # -----------------------------------------------------------------------------
+if [ "$MODE" = "full" ]; then
 echo ""
 echo "🔧 Setting default values for configurable helpers..."
 set_number_if_default   "input_number.amber_min_sell_price"                  0.15     "Min Sell Price"
@@ -216,6 +217,8 @@ set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_start" "1
 set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_end"  "06:00:00" "Force Sell End"
 set_datetime_if_default "input_datetime.amber_block_smart_shift_start"       "00:00:00" "Block Smart Shift Start"
 set_datetime_if_default "input_datetime.amber_block_smart_shift_end"         "06:00:00" "Block Smart Shift End"
+
+fi  # end MODE=full
 
 # -----------------------------------------------------------------------------
 # Hide internal state flag helpers from the HA UI
