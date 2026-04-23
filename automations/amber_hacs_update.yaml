@@ -2,43 +2,62 @@
 # Amber Integration - HACS Auto Install
 ################################################################################
 #
-#   Automatically runs install.sh whenever HACS downloads or updates the
-#   Amber Electric integration.
+#   Runs install.sh on HA startup (sync mode) and after HACS updates (full mode).
 #
-#   Triggers when the HACS update entity for this integration transitions
-#   from "on" (update available) to "off" (update installed).
+#   Startup (sync mode): quickly copies files only — no pip installs.
+#   HACS update (full mode): full install including pip/pycognito.
 #
 #-------------------------------------------------------------------------------
 # Change Log
 #-------------------------------------------------------------------------------
 #   v1.0    2026-04-08    Kane Li    - Initial version
-#   v1.1    2026-04-23    Kane Li    - Fixed trigger: HACS 2.0 removed hacs/* events.
-#                                      Now uses update entity state change instead.
+#   v1.1    2026-04-23    Kane Li    - Fixed trigger: HACS 2.0 removed hacs/* events
+#   v1.2    2026-04-23    Kane Li    - Added startup trigger as reliable fallback
+#   v1.3    2026-04-23    Kane Li    - Split into sync (startup) and full (update) modes
 ################################################################################
 
 - id: amber_hacs_auto_install
   alias: Amber Integration - HACS Auto Install
   description: >
-    Runs install.sh automatically when HACS updates the Amber integration,
-    copying files from custom_components into their /config/ locations.
+    Syncs files on HA startup and runs full install after HACS updates.
   trigger:
-    # Fires when HACS finishes downloading the update (update entity goes off = installed)
+    # Startup: lightweight file sync only
+    - platform: homeassistant
+      event: start
+      id: startup
+    # HACS update: full install including pip dependencies
     - platform: state
       entity_id: update.home_assistant_custom_amber_electric_integration_update
       to: "off"
+      id: hacs_update
   action:
-    - delay: "00:00:05"  # Brief delay to ensure files are written to disk
-    - service: shell_command.amber_hacs_install
-      response_variable: result
-    - service: notify.notification
-      data:
-        title: "Amber Integration Updated"
-        message: >
-          HACS update detected. Install script ran automatically.
-          {% if result.returncode == 0 %}
-          ✅ Files copied successfully. Reload YAML to apply changes:
-          Developer Tools → YAML → Reload All
-          {% else %}
-          ⚠️ Install script failed. Run manually:
-          bash /config/custom_components/amber_integration/install.sh
-          {% endif %}
+    - delay: "00:00:10"
+    - choose:
+        # Startup — sync mode (fast, no pip)
+        - conditions:
+            - condition: trigger
+              id: startup
+          sequence:
+            - service: shell_command.amber_hacs_install
+              data:
+                mode: sync
+              response_variable: result
+        # HACS update — full mode (pip + sync)
+        - conditions:
+            - condition: trigger
+              id: hacs_update
+          sequence:
+            - service: shell_command.amber_hacs_install
+              response_variable: result
+            - service: notify.notification
+              data:
+                title: "Amber Integration Updated"
+                message: >
+                  HACS update detected. Install script ran automatically.
+                  {% if result.returncode == 0 %}
+                  ✅ Files copied. Reload YAML to apply:
+                  Developer Tools → YAML → Reload All
+                  {% else %}
+                  ⚠️ Install failed. Run manually:
+                  bash /config/custom_components/amber_integration/install.sh
+                  {% endif %}

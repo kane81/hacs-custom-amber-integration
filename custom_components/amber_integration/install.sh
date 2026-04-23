@@ -15,6 +15,9 @@
 
 set -e
 
+# Mode: "full" (default) runs pip installs. "sync" just copies files.
+MODE=${1:-full}
+
 SRC=/config/custom_components/amber_integration
 CONFIG=/config/configuration.yaml
 ERRORS=0
@@ -25,27 +28,32 @@ echo " Integration - Install Script"
 echo "============================================="
 echo ""
 
-# Ensure python3 is available
-echo "🔍 Checking python3..."
-if ! command -v python3 &>/dev/null; then
-    echo "   python3 not found, installing..."
-    apk add python3
-fi
-echo "   python3 $(python3 --version)"
+if [ "$MODE" = "full" ]; then
+    # Ensure python3 is available
+    echo "🔍 Checking python3..."
+    if ! command -v python3 &>/dev/null; then
+        echo "   python3 not found, installing..."
+        apk add python3
+    fi
+    echo "   python3 $(python3 --version)"
 
-# Ensure pip3 is available
-echo "🔍 Checking pip3..."
-if ! command -v pip3 &>/dev/null; then
-    echo "   pip3 not found, installing..."
-    apk add py3-pip
-fi
-echo "   pip3 found"
-echo ""
+    # Ensure pip3 is available
+    echo "🔍 Checking pip3..."
+    if ! command -v pip3 &>/dev/null; then
+        echo "   pip3 not found, installing..."
+        apk add py3-pip
+    fi
+    echo "   pip3 found"
+    echo ""
 
-# Install pycognito
-echo "🐍 Installing pycognito..."
-pip3 install pycognito --break-system-packages
-echo ""
+    # Install pycognito
+    echo "🐍 Installing pycognito..."
+    pip3 install pycognito --break-system-packages
+    echo ""
+else
+    echo "⚡ Sync mode — skipping python/pip checks"
+    echo ""
+fi
 
 # Automations
 echo "📋 Copying automations..."

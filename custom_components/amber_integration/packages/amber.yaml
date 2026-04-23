@@ -55,7 +55,7 @@ shell_command:
 
   # Runs the install script to copy integration files after a HACS update
   # Called automatically by amber_hacs_auto_install automation
-  amber_hacs_install: "bash /config/custom_components/amber_integration/install.sh"
+  amber_hacs_install: "bash /config/custom_components/amber_integration/install.sh {{ mode | default('full') }}"
 
 ################################################################################
 # Input Numbers
