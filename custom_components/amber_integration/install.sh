@@ -230,6 +230,10 @@ set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_start" "1
 set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_end"  "06:00:00" "Force Sell End"
 set_datetime_if_default "input_datetime.amber_block_smart_shift_start"       "00:00:00" "Block Smart Shift Start"
 set_datetime_if_default "input_datetime.amber_block_smart_shift_end"         "06:00:00" "Block Smart Shift End"
+set_number_if_default   "input_number.amber_max_buy_price_to_charge"         0.05       "Max Buy Price to Charge"
+set_number_if_default   "input_number.amber_max_soc_to_charge"               100        "Max SOC to Charge"
+set_datetime_if_default "input_datetime.amber_force_charge_start"            "11:00:00" "Force Charge Start"
+set_datetime_if_default "input_datetime.amber_force_charge_end"              "13:00:00" "Force Charge End"
 
 fi  # end MODE=full
 

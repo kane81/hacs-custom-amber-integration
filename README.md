@@ -393,8 +393,8 @@ Forces the battery to charge from the grid when the buy price is at or below a c
 |---|---|---|
 | **Amber Max Buy Price to Charge** | 5c/kWh | Maximum buy price to trigger force charge. Set negative (e.g. -3c) to only charge when prices are truly negative. |
 | **Amber Max SOC to Charge** | 100% | Switch to preserve mode when SOC reaches this level |
-| **Amber Force Charge Start** | 10:00 | Start of the charge window |
-| **Amber Force Charge End** | 14:00 | End of the charge window |
+| **Amber Force Charge Start** | 11:00 | Start of the charge window |
+| **Amber Force Charge End** | 13:00 | End of the charge window |
 
 ### Price Thresholds
 
