@@ -1,6 +1,4 @@
-<p align="center"><img src="brand/icon.png" width="120"/></p>
-
-# Home Assistant Custom Amber Electric Integration
+<table><tr><td><img src="brand/icon.png" width="80"/></td><td><h1>Home Assistant Custom Amber Electric Integration</h1></td></tr></table>
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/release/kane81/hacs-custom-amber-integration.svg)](https://github.com/kane81/hacs-custom-amber-integration/releases)
