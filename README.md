@@ -1,4 +1,6 @@
-# hacs-custom-amber-integration
+<p align="center"><img src="brand/icon.png" width="120"/></p>
+
+# Home Assistant Custom Amber Electric Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/release/kane81/hacs-custom-amber-integration.svg)](https://github.com/kane81/hacs-custom-amber-integration/releases)
@@ -299,9 +301,9 @@ The easiest path is:
 | Toggle | Controls | Default |
 |---|---|---|
 | `Enable Automation: Block Smart Shift` | Disables Smart Shift overnight to preserve battery | OFF |
-| `Enable Automation: Charge on Negative Buy` | Charges battery from grid when buy price goes negative | OFF |
 | `Enable Automation: Force Export Custom FiT` | Discharges battery to grid at high sell prices | OFF |
 | `Enable Automation: Force Export Notifications` | Sends notifications when force export starts/stops/fails | ON |
+| `Enable Automation: Custom Force Charge` | Charges battery from grid when buy price is at or below custom threshold | OFF |
 | `Enable Automation: Negative Price Notify` | Sends notification when buy price goes negative | OFF |
 
 ---
@@ -350,7 +352,6 @@ Go to **Overview → Devices → Helpers** and turn on **Enable Automation: Nega
 
 Watch the dashboard card — the Negative Price Notify row will show 🟢 when active. Monitor it for a day or two, then enable the battery control automations when ready:
 - **Enable Automation: Force Export Custom FiT** — discharges battery at high sell prices
-- **Enable Automation: Charge on Negative Buy** — charges battery when buy price goes negative
 - **Enable Automation: Block Smart Shift** — disables Smart Shift overnight
 
 ---
@@ -375,12 +376,27 @@ All settings can be changed without editing any YAML files. Changes to price thr
 
 | Helper | Default | Purpose |
 |---|---|---|
-| **Amber Charge on Negative Start** | 10:00 | Start of negative price monitoring window |
-| **Amber Charge on Negative End** | 17:00 | End of negative price monitoring window |
 | **Amber Force Sell Start** | 16:00 | Start of force export window |
 | **Amber Force Sell End** | 06:00 | End of force export window (overnight) |
 | **Amber Block Smart Shift Start** | 00:00 | Start of Smart Shift block window |
 | **Amber Block Smart Shift End** | 06:00 | End of Smart Shift block window |
+
+### Custom Force Charge
+
+Forces the battery to charge from the grid when the buy price is at or below a configurable threshold. Useful for pre-charging the battery during cheap or negative price windows before an evening peak.
+
+**How it works:**
+- While the buy price is at or below the threshold and SOC is below the maximum, the automation issues a 60-minute charge override via the Amber Smart Shift API. It re-issues the override silently every 5 minutes to keep it active.
+- When SOC reaches the maximum, it switches to **preserve mode** — holding the charge level without discharging, waiting for the price to rise or the window to close.
+- When the price rises above the threshold or the window ends, the override is cancelled and Smart Shift is restored.
+- Works with negative buy prices — if Amber is paying you to consume power, the automation will charge the battery at any threshold above the negative price.
+
+| Helper | Default | Purpose |
+|---|---|---|
+| **Amber Max Buy Price to Charge** | 5c/kWh | Maximum buy price to trigger force charge. Set negative (e.g. -3c) to only charge when prices are truly negative. |
+| **Amber Max SOC to Charge** | 100% | Switch to preserve mode when SOC reaches this level |
+| **Amber Force Charge Start** | 10:00 | Start of the charge window |
+| **Amber Force Charge End** | 14:00 | End of the charge window |
 
 ### Price Thresholds
 
@@ -463,12 +479,9 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 {% set fit_end        = states('input_datetime.amber_force_sell_on_custom_fit_end')[0:5] %}
 {% set ss_block_start = states('input_datetime.amber_block_smart_shift_start')[0:5] %}
 {% set ss_block_end   = states('input_datetime.amber_block_smart_shift_end')[0:5] %}
-{% set charge_start   = states('input_datetime.amber_charge_on_negative_start')[0:5] %}
-{% set charge_end     = states('input_datetime.amber_charge_on_negative_end')[0:5] %}
 {# --- Automation Enable Flags --- #}
 {% set en_force_export = is_state('input_boolean.amber_enable_force_export_custom_fit', 'on') %}
 {% set en_block_ss     = is_state('input_boolean.amber_enable_block_smart_shift', 'on') %}
-{% set en_grid_charge  = is_state('input_boolean.amber_enable_charge_on_negative_buy', 'on') %}
 {% set en_neg_notify   = is_state('input_boolean.amber_enable_negative_price_notify', 'on') %}
 {# --- Automation Session State Flags --- #}
 {% set force_export_active = is_state('input_boolean.amber_force_export_active', 'on') %}
@@ -478,7 +491,6 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 {# --- Icon logic: 🚫 disabled · 🟢 active · 🔴 enabled/waiting --- #}
 {% set ic_force_export = '⚠️' if (battery_offline and en_force_export) else ('🚫' if not en_force_export else ('🟢' if force_export_active else '🔴')) %}
 {% set ic_block_ss     = '⚠️' if (battery_offline and en_block_ss)     else ('🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴')) %}
-{% set ic_grid_charge  = '⚠️' if (battery_offline and en_grid_charge)  else ('🚫' if not en_grid_charge  else ('🟢' if grid_charging        else '🔴')) %}
 {% set ic_neg_notify   = '🚫' if not en_neg_notify   else '🟢' %}
 
 **💲 Amber**
@@ -490,7 +502,6 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 **🤖 Automations**
 &nbsp;&nbsp;{{ ic_force_export }} **Export** - FiT {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
 &nbsp;&nbsp;{{ ic_block_ss }} **Block Smart Shift** - {{ ss_block_start }}–{{ ss_block_end }}{{ ' · Active' if ss_blocked else '' }}
-&nbsp;&nbsp;{{ ic_grid_charge }} **Grid Charge on Negative Buy** - {{ charge_start }}-{{ charge_end }}
 &nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify** - {{ charge_start }}–{{ charge_end }}
 ```
 

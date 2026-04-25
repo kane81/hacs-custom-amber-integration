@@ -155,6 +155,22 @@ input_number:
     unit_of_measurement: "%"
 
 
+  amber_max_buy_price_to_charge:
+    name: Amber Max Buy Price to Charge
+    min: -1
+    max: 1
+    step: 0.01
+    # No initial: — HA restores the last value you set.
+    unit_of_measurement: $/kWh
+
+  amber_max_soc_to_charge:
+    name: Amber Max SOC to Charge
+    min: 0
+    max: 100
+    step: 1
+    # No initial: — HA restores the last value you set.
+    unit_of_measurement: "%"
+
 ################################################################################
 # Input Datetimes
 # Adjust time windows via Settings → Helpers
@@ -165,18 +181,6 @@ input_datetime:
     name: Amber Last Polled
     has_date: true
     has_time: true
-
-  amber_charge_on_negative_start:
-    name: Amber Charge on Negative Start
-    has_date: false
-    has_time: true
-    # No initial: — HA restores the last value you set.
-
-  amber_charge_on_negative_end:
-    name: Amber Charge on Negative End
-    has_date: false
-    has_time: true
-    # No initial: — HA restores the last value you set.
 
   amber_force_sell_on_custom_fit_start:
     name: Amber Force Sell Start
@@ -202,6 +206,18 @@ input_datetime:
     has_time: true
     # No initial: — HA restores the last value you set.
 
+  amber_force_charge_start:
+    name: Amber Force Charge Start
+    has_date: false
+    has_time: true
+    # No initial: — HA restores the last value you set.
+
+  amber_force_charge_end:
+    name: Amber Force Charge End
+    has_date: false
+    has_time: true
+    # No initial: — HA restores the last value you set.
+
 ################################################################################
 # Input Booleans
 ################################################################################
@@ -219,13 +235,6 @@ input_boolean:
     # From then on HA remembers whatever the user last set.
     icon: mdi:power-sleep
 
-  amber_enable_charge_on_negative_buy:
-    name: "Enable Automation: Charge on Negative Buy"
-    # No initial: — HA restores last known state on restart.
-    # On first install the script sets these to off via the HA API.
-    # From then on HA remembers whatever the user last set.
-    icon: mdi:battery-charging
-
   amber_enable_force_export_custom_fit:
     name: "Enable Automation: Force Export Custom FiT"
     # No initial: — HA restores last known state on restart.
@@ -240,6 +249,12 @@ input_boolean:
     # Turn OFF via Overview → Devices → Helpers to silence force export alerts.
     icon: mdi:bell-outline
 
+  amber_enable_force_charge_custom_rate:
+    name: "Enable Automation: Custom Force Charge"
+    # No initial: — HA restores last known state on restart.
+    # On first install the script sets this to off via the HA API.
+    icon: mdi:battery-charging-high
+
   amber_enable_negative_price_notify:
     name: "Enable Automation: Negative Price Notify"
     # No initial: — HA restores last known state on restart.
@@ -251,12 +266,6 @@ input_boolean:
   # Automation State Tracking Flags
   # Set/cleared by automations — do not toggle manually
   #-----------------------------------------------------------------------------
-
-  amber_grid_charging_active:
-    # initial: false is intentional — this is a session state flag
-    # that must always reset to off on restart. Do NOT remove initial:.
-    name: Amber Grid Charging Active
-    initial: false
 
   amber_block_smart_shift_active:
     # initial: false is intentional — this is a session state flag
@@ -274,6 +283,12 @@ input_boolean:
   # True when Amber cannot communicate with the battery
   # Set by: amber_graphql.py live poll when stateOfChargePercentage is None
   # Used by: dashboard card to show offline warning
+  amber_force_charge_active:
+    # initial: false is intentional — session state flag, must reset on restart.
+    name: Amber Force Charge Active
+    initial: false
+    icon: mdi:battery-charging-high
+
   amber_battery_offline:
     # initial: false is intentional — this is a session state flag
     # that must always reset to off on restart. Do NOT remove initial:.

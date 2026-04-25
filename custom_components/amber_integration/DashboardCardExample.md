@@ -38,23 +38,21 @@ Automation status icon legend:
 {% set fit_end        = states('input_datetime.amber_force_sell_on_custom_fit_end')[0:5] %}
 {% set ss_block_start = states('input_datetime.amber_block_smart_shift_start')[0:5] %}
 {% set ss_block_end   = states('input_datetime.amber_block_smart_shift_end')[0:5] %}
-{% set charge_start   = states('input_datetime.amber_charge_on_negative_start')[0:5] %}
-{% set charge_end     = states('input_datetime.amber_charge_on_negative_end')[0:5] %}
 {# --- Automation Enable Flags --- #}
 {% set en_force_export = is_state('input_boolean.amber_enable_force_export_custom_fit', 'on') %}
 {% set en_block_ss     = is_state('input_boolean.amber_enable_block_smart_shift', 'on') %}
-{% set en_grid_charge  = is_state('input_boolean.amber_enable_charge_on_negative_buy', 'on') %}
 {% set en_neg_notify   = is_state('input_boolean.amber_enable_negative_price_notify', 'on') %}
 {# --- Automation Session State Flags --- #}
 {% set force_export_active = is_state('input_boolean.amber_force_export_active', 'on') %}
 {% set ss_blocked          = is_state('input_boolean.amber_block_smart_shift_active', 'on') %}
-{% set grid_charging       = is_state('input_boolean.amber_grid_charging_active', 'on') %}
 {% set battery_offline     = is_state('input_boolean.amber_battery_offline', 'on') %}
 {# --- Icon logic: 🚫 disabled · 🟢 active · 🔴 enabled/waiting --- #}
 {% set ic_force_export = '⚠️' if (battery_offline and en_force_export) else ('🚫' if not en_force_export else ('🟢' if force_export_active else '🔴')) %}
 {% set ic_block_ss     = '⚠️' if (battery_offline and en_block_ss)     else ('🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴')) %}
-{% set ic_grid_charge  = '⚠️' if (battery_offline and en_grid_charge)  else ('🚫' if not en_grid_charge  else ('🟢' if grid_charging        else '🔴')) %}
+{% set en_force_charge     = is_state('input_boolean.amber_enable_force_charge_custom_rate', 'on') %}
+{% set force_charge_active = is_state('input_boolean.amber_force_charge_active', 'on') %}
 {% set ic_neg_notify   = '🚫' if not en_neg_notify   else '🟢' %}
+{% set ic_force_charge = '⚠️' if (battery_offline and en_force_charge) else ('🚫' if not en_force_charge else ('🟢' if force_charge_active else '🔴')) %}
 
 **💲 Amber**
 &nbsp;&nbsp;Buy **{{ (buy_price * 100) | round(0) | int }}c** &nbsp;&nbsp; Sell **{{ sell_display }}c** &nbsp;&nbsp; SOC **{{ '⚠️' if battery_offline else (soc | round(0) | int ~ '%') }}**
@@ -65,5 +63,5 @@ Automation status icon legend:
 **🤖 Automations**
 &nbsp;&nbsp;{{ ic_force_export }} **Export**{{ ' 🔕' if not en_export_notify else '' }} - FiT {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
 &nbsp;&nbsp;{{ ic_block_ss }} **Block Smart Shift** - {{ ss_block_start }}–{{ ss_block_end }}{{ ' · Active' if ss_blocked else '' }}
-&nbsp;&nbsp;{{ ic_grid_charge }} **Grid Charge on Negative Buy** - {{ charge_start }}-{{ charge_end }}
+&nbsp;&nbsp;{{ ic_force_charge }} **Charge** - ≤{{ (max_buy_price * 100) | round(0) | int }}c · Max SOC {{ max_soc_charge | int }}% · {{ fc_start }}–{{ fc_end }}
 &nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify** - {{ charge_start }}–{{ charge_end }}

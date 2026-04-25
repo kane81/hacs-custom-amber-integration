@@ -79,6 +79,21 @@ mkdir -p /config/templates
 cp -v $SRC/templates/amber.yaml /config/templates/
 
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Remove deprecated files from previous versions
+# -----------------------------------------------------------------------------
+echo ""
+echo "🧹 Removing deprecated files..."
+DEPRECATED=(
+    "/config/automations/amber_charge_on_negative_buy.yaml"
+)
+for f in "${DEPRECATED[@]}"; do
+    if [ -f "$f" ]; then
+        rm "$f"
+        echo "   ✅ Removed: $f"
+    fi
+done
+
 # Load HA credentials — needed for all API calls below
 # -----------------------------------------------------------------------------
 SECRETS=/config/secrets.yaml
@@ -180,9 +195,9 @@ hide_entity() {
 echo ""
 echo "🔧 Setting automation enable booleans..."
 set_boolean_off_if_new "input_boolean.amber_enable_block_smart_shift"
-set_boolean_off_if_new "input_boolean.amber_enable_charge_on_negative_buy"
 set_boolean_off_if_new "input_boolean.amber_enable_force_export_custom_fit"
 set_boolean_off_if_new "input_boolean.amber_enable_negative_price_notify"
+set_boolean_off_if_new "input_boolean.amber_enable_force_charge_custom_rate"
 
 # Force export notifications default ON
 set_boolean_on_if_new() {
@@ -211,8 +226,6 @@ echo ""
 echo "🔧 Setting default values for configurable helpers..."
 set_number_if_default   "input_number.amber_min_sell_price"                  0.15     "Min Sell Price"
 set_number_if_default   "input_number.amber_min_soc_to_sell"                 10       "Min SOC to Sell"
-set_datetime_if_default "input_datetime.amber_charge_on_negative_start"      "10:00:00" "Charge on Negative Start"
-set_datetime_if_default "input_datetime.amber_charge_on_negative_end"        "17:00:00" "Charge on Negative End"
 set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_start" "16:00:00" "Force Sell Start"
 set_datetime_if_default "input_datetime.amber_force_sell_on_custom_fit_end"  "06:00:00" "Force Sell End"
 set_datetime_if_default "input_datetime.amber_block_smart_shift_start"       "00:00:00" "Block Smart Shift Start"
@@ -225,7 +238,6 @@ fi  # end MODE=full
 # -----------------------------------------------------------------------------
 echo ""
 echo "🙈 Hiding internal state flag helpers..."
-hide_entity "input_boolean.amber_grid_charging_active"
 hide_entity "input_boolean.amber_block_smart_shift_active"
 hide_entity "input_boolean.amber_force_export_active"
 hide_entity "input_boolean.amber_battery_offline"

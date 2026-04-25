@@ -1,0 +1,249 @@
+################################################################################
+# Amber Custom Force Charge
+################################################################################
+#
+#   When the Amber buy price is at or below the configured custom buy rate
+#   threshold, forces the battery to charge from the grid via the Amber
+#   Smart Shift API.
+#
+# How it works:
+#   Window start time fires (default 10:00)
+#       ↓
+#   Automation enabled? (input_boolean.amber_enable_force_charge_custom_rate)
+#       ↓ No  → do nothing
+#       ↓ Yes
+#   Buy price <= threshold AND SOC < max SOC?
+#       ↓ Yes → call charge 60 + set flag + notify (once)
+#       ↓
+#   amber_last_polled updates (every 5 min) OR threshold helpers change
+#       ↓
+#   Conditions still met AND already active → re-issue charge 60 (silent)
+#   Conditions no longer met AND was active → cancel override + notify
+#   Window end fires AND was active → cancel override + notify
+#       ↓
+#   Automation disabled mid-session AND was active → cancel override + notify
+#
+# Enable / Disable:
+#   Controlled by input_boolean.amber_enable_force_charge_custom_rate (default OFF)
+#
+#-------------------------------------------------------------------------------
+# Configuration
+#-------------------------------------------------------------------------------
+#   → input_number.amber_max_buy_price_to_charge (default 0.10 = 10c/kWh)
+#   → input_number.amber_max_soc_to_charge (default 95%)
+#   → input_datetime.amber_force_charge_start (default 10:00)
+#   → input_datetime.amber_force_charge_end (default 14:00)
+#   → input_boolean.amber_enable_force_charge_custom_rate (default OFF)
+#   → input_boolean.amber_force_charge_active (state tracking)
+#
+#-------------------------------------------------------------------------------
+# Change Log
+#-------------------------------------------------------------------------------
+#   v1.0    2026-04-25    Kane Li    - Initial version
+################################################################################
+
+- id: amber_force_charge_on_custom_rate
+  alias: Amber Custom Force Charge
+  trace:
+    stored_traces: 20
+  description: >
+    Forces battery to charge from grid via Amber Smart Shift API when buy price
+    is at or below the custom threshold and battery SOC is below the maximum.
+    Controlled by input_boolean.amber_enable_force_charge_custom_rate (default OFF).
+  trigger:
+    - platform: time
+      at: input_datetime.amber_force_charge_start
+      id: window_start
+    - platform: time
+      at: input_datetime.amber_force_charge_end
+      id: window_end
+    - platform: state
+      entity_id: input_datetime.amber_last_polled
+      id: price_change
+    - platform: state
+      entity_id: input_number.amber_max_buy_price_to_charge
+      id: price_change
+    - platform: state
+      entity_id: input_number.amber_max_soc_to_charge
+      id: price_change
+    - platform: state
+      entity_id: input_boolean.amber_enable_force_charge_custom_rate
+      to: "off"
+      id: disabled
+  condition:
+    - condition: state
+      entity_id: input_boolean.amber_battery_offline
+      state: "off"
+    - condition: template
+      value_template: "{{ states('input_number.amber_general_price_actual') not in ['unknown', 'unavailable'] }}"
+    - condition: template
+      value_template: >
+        {% if trigger.id in ['window_end', 'disabled'] %}
+          true
+        {% else %}
+          {% set now_t = now().strftime('%H:%M:%S') %}
+          {% set start = states('input_datetime.amber_force_charge_start')[0:8] %}
+          {% set end   = states('input_datetime.amber_force_charge_end')[0:8] %}
+          {% if start > end %}
+            {{ now_t >= start or now_t <= end }}
+          {% else %}
+            {{ now_t >= start and now_t <= end }}
+          {% endif %}
+        {% endif %}
+  action:
+    - variables:
+        buy_price:       "{{ states('input_number.amber_general_price_actual') | float(0) }}"
+        max_buy_price:   "{{ states('input_number.amber_max_buy_price_to_charge') | float(0.10) }}"
+        max_soc:         "{{ states('input_number.amber_max_soc_to_charge') | float(95) }}"
+        soc:             "{{ states('input_number.amber_battery_soc') | float(0) }}"
+        active:          "{{ is_state('input_boolean.amber_force_charge_active', 'on') }}"
+        enabled:         "{{ is_state('input_boolean.amber_enable_force_charge_custom_rate', 'on') }}"
+        notify_enabled:  "{{ is_state('input_boolean.amber_enable_force_export_notify', 'on') }}"
+
+    - choose:
+
+        # Automation disabled mid-session
+        - conditions:
+            - condition: trigger
+              id: disabled
+            - condition: template
+              value_template: "{{ active }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_charge_active
+            - if:
+                - condition: template
+                  value_template: "{{ notify_enabled }}"
+              then:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Charge Cancelled - Automation Disabled"
+                    message: >
+                      Force Charge automation was disabled while a session was active.
+                      Charge override cancelled. Smart Shift restored.
+
+        # Window ended with active session
+        - conditions:
+            - condition: trigger
+              id: window_end
+            - condition: template
+              value_template: "{{ active }}"
+          sequence:
+            - service: shell_command.amber_cancel_override
+            - service: shell_command.amber_smartshift_on
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_charge_active
+            - if:
+                - condition: template
+                  value_template: "{{ notify_enabled }}"
+              then:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Charge Ended - Window Closed"
+                    message: >
+                      Force charge window ended. Override cancelled. Smart Shift restored.
+
+        # START - conditions met, not yet active
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and buy_price <= max_buy_price and soc < max_soc and not active }}"
+          sequence:
+            - service: shell_command.amber_force_charge
+              data:
+                duration: 60
+              response_variable: cmd_result
+            - if:
+                - condition: template
+                  value_template: "{{ cmd_result.returncode == 0 }}"
+              then:
+                - service: input_boolean.turn_on
+                  target:
+                    entity_id: input_boolean.amber_force_charge_active
+                - if:
+                    - condition: template
+                      value_template: "{{ notify_enabled }}"
+                  then:
+                    - service: notify.notification
+                      data:
+                        title: "Amber Force Charge Started"
+                        message: >
+                          Buy price is {{ (buy_price * 100) | round(0) | int }}c/kWh
+                          (threshold: {{ (max_buy_price * 100) | round(0) | int }}c/kWh).
+                          SOC is {{ soc | round(0) | int }}%. Charging started.
+              else:
+                - if:
+                    - condition: template
+                      value_template: "{{ notify_enabled }}"
+                  then:
+                    - service: notify.notification
+                      data:
+                        title: "Amber Force Charge Failed"
+                        message: >
+                          Failed to start force charge via Amber API.
+                          Return code: {{ cmd_result.returncode }}
+                          stdout: {{ cmd_result.stdout }}
+                          stderr: {{ cmd_result.stderr }}
+
+        # MAINTAIN - conditions still met, already active (silent re-issue)
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and buy_price <= max_buy_price and soc < max_soc and active }}"
+          sequence:
+            - service: shell_command.amber_force_charge
+              data:
+                duration: 60
+
+        # PRESERVE - battery full, price still good, hold charge (silent re-issue)
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and buy_price <= max_buy_price and soc >= max_soc }}"
+          sequence:
+            - service: shell_command.amber_force_preserve
+              data:
+                duration: 60
+
+        # STOP - conditions no longer met
+        - conditions:
+            - condition: template
+              value_template: "{{ enabled and active and (buy_price > max_buy_price or soc >= max_soc) }}"
+          sequence:
+            - choose:
+                # Battery full — switch to preserve mode to hold charge
+                - conditions:
+                    - condition: template
+                      value_template: "{{ soc >= max_soc }}"
+                  sequence:
+                    - service: shell_command.amber_force_preserve
+                      data:
+                        duration: 60
+                # Price too high — cancel override and restore Smart Shift
+                - conditions:
+                    - condition: template
+                      value_template: "{{ buy_price > max_buy_price }}"
+                  sequence:
+                    - service: shell_command.amber_cancel_override
+                    - service: shell_command.amber_smartshift_on
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_charge_active
+            - if:
+                - condition: template
+                  value_template: "{{ notify_enabled }}"
+              then:
+                - service: notify.notification
+                  data:
+                    title: "Amber Force Charge Ended"
+                    message: >
+                      {% if soc >= max_soc %}
+                      Battery SOC reached {{ soc | round(0) | int }}%
+                      (maximum: {{ max_soc | round(0) | int }}%).
+                      Switched to preserve mode to hold charge.
+                      {% else %}
+                      Buy price rose to {{ (buy_price * 100) | round(0) | int }}c/kWh
+                      (threshold: {{ (max_buy_price * 100) | round(0) | int }}c/kWh).
+                      Override cancelled. Smart Shift restored.
+                      {% endif %}
