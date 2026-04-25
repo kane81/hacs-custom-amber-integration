@@ -500,7 +500,7 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 **🤖 Automations**
 &nbsp;&nbsp;{{ ic_force_export }} **Export** - FiT {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
 &nbsp;&nbsp;{{ ic_block_ss }} **Block Smart Shift** - {{ ss_block_start }}–{{ ss_block_end }}{{ ' · Active' if ss_blocked else '' }}
-&nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify** - {{ charge_start }}–{{ charge_end }}
+&nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify**
 ```
 
 ---
