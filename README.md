@@ -299,9 +299,9 @@ The easiest path is:
 | Toggle | Controls | Default |
 |---|---|---|
 | `Enable Automation: Block Smart Shift` | Disables Smart Shift overnight to preserve battery | OFF |
-| `Enable Automation: Force Export Custom FiT` | Discharges battery to grid at high sell prices | OFF |
+| `Enable Automation: Force Export` | Discharges battery to grid at high sell prices | OFF |
 | `Enable Automation: Force Export Notifications` | Sends notifications when force export starts/stops/fails | ON |
-| `Enable Automation: Custom Force Charge` | Charges battery from grid when buy price is at or below custom threshold | OFF |
+| `Enable Automation: Force Charge` | Charges battery from grid when buy price is at or below custom threshold | OFF |
 | `Enable Automation: Negative Price Notify` | Sends notification when buy price goes negative | OFF |
 
 ---
@@ -349,7 +349,7 @@ Start with just one to verify it behaves as expected before enabling others.
 Go to **Overview → Devices → Helpers** and turn on **Enable Automation: Negative Price Notify** first — it sends a notification when buy price goes negative and has no battery control, so it's safe to test with.
 
 Watch the dashboard card — the Negative Price Notify row will show 🟢 when active. Monitor it for a day or two, then enable the battery control automations when ready:
-- **Enable Automation: Force Export Custom FiT** — discharges battery at high sell prices
+- **Enable Automation: Force Export** — discharges battery at high sell prices
 - **Enable Automation: Block Smart Shift** — disables Smart Shift overnight
 
 ---

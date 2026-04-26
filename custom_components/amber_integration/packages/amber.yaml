@@ -236,7 +236,7 @@ input_boolean:
     icon: mdi:power-sleep
 
   amber_enable_force_export_custom_fit:
-    name: "Enable Automation: Force Export Custom FiT"
+    name: "Enable Automation: Force Export"
     # No initial: — HA restores last known state on restart.
     # On first install the script sets these to off via the HA API.
     # From then on HA remembers whatever the user last set.
@@ -250,7 +250,7 @@ input_boolean:
     icon: mdi:bell-outline
 
   amber_enable_force_charge_custom_rate:
-    name: "Enable Automation: Custom Force Charge"
+    name: "Enable Automation: Force Charge"
     # No initial: — HA restores last known state on restart.
     # On first install the script sets this to off via the HA API.
     icon: mdi:battery-charging-high
