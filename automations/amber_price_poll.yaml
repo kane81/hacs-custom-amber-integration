@@ -65,6 +65,11 @@
       seconds: "30"
       minutes: "/5"
   action:
+    - if:
+        - condition: trigger
+          id: startup
+      then:
+        - delay: "00:00:30"  # Wait for amber_auth to complete before polling
     - service: shell_command.amber_live_poll
       response_variable: poll_result
     - if:
