@@ -58,6 +58,9 @@
     Updates price and metrics helpers which trigger downstream automations.
     Always-on automation - heartbeat of the entire integration.
   trigger:
+    - platform: homeassistant
+      event: start
+      id: startup
     - platform: time_pattern
       seconds: "30"
       minutes: "/5"
