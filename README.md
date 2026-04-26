@@ -391,7 +391,7 @@ Forces the battery to charge from the grid when the buy price is at or below a c
 
 | Helper | Default | Purpose |
 |---|---|---|
-| **Amber Max Buy Price to Charge** | 5c/kWh | Maximum buy price to trigger force charge. Set negative (e.g. -3c) to only charge when prices are truly negative. |
+| **Amber Max Buy Price** | 5c/kWh | Maximum buy price to trigger force charge. Set negative (e.g. -3c) to only charge when prices are truly negative. |
 | **Amber Max SOC to Charge** | 100% | Switch to preserve mode when SOC reaches this level |
 | **Amber Force Charge Start** | 11:00 | Start of the charge window |
 | **Amber Force Charge End** | 13:00 | End of the charge window |
@@ -504,7 +504,7 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 &nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
 
 **🤖 Automations**
-&nbsp;&nbsp;{{ ic_force_export }} **Export** - FiT {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
+&nbsp;&nbsp;{{ ic_force_export }} **Export** - >= {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
 &nbsp;&nbsp;{{ ic_force_charge }} **Charge** - <= {{ (max_buy_price * 100) | round(0) | int }}c · Max SOC {{ max_soc_charge | int }}% · {{ fc_start }}–{{ fc_end }}
 &nbsp;&nbsp;{{ ic_block_ss }} **Block Smart Shift** - {{ ss_block_start }}–{{ ss_block_end }}{{ ' · Active' if ss_blocked else '' }}
 &nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify**
