@@ -185,17 +185,29 @@ homeassistant:
 
 > If you already have a `homeassistant:` section, add just the `packages:` line underneath it.
 
-Save with **Ctrl+S** then restart HA: **Settings → System → Restart**
+Save with **Ctrl+S**.
 
 ---
 
 ### Step 3 — Add Credentials
 
-Still in **Studio Code Server**, open `/config/secrets.yaml` from the file explorer and add:
+#### 1. Get your HA Long-Lived Access Token
+
+The integration needs a token to communicate with Home Assistant's API.
+
+1. Click your **profile avatar** (bottom left of the HA sidebar)
+2. Scroll down to **Long-Lived Access Tokens**
+3. Click **Create Token**
+4. Name it `amber_smartshift` and click **OK**
+5. **Copy the token immediately** — it will not be shown again
+
+#### 2. Add credentials to secrets.yaml
+
+In **Studio Code Server**, open `/config/secrets.yaml` and add:
 
 ```yaml
-amber_email: "your@email.com"
-amber_password: "your-amber-password"
+amber_email: "your-email-you-use-to-login-to-the-amber-app"
+amber_password: "your-password-you-use-to-login-to-the-amber-app"
 ha_long_lived_token: "your-long-lived-access-token"
 
 # Optional — only needed if adding email notifications
@@ -207,10 +219,7 @@ Save with **Ctrl+S**.
 
 > **No restart needed for secrets.yaml** — the scripts read `secrets.yaml` directly every time they run. You can edit credentials and immediately re-run the script without restarting HA.
 
-**Getting your HA long-lived access token:**
-1. Click your profile avatar (bottom left sidebar)
-2. Scroll to **Long-Lived Access Tokens** → **Create Token**
-3. Name it `amber_smartshift` — copy it immediately, it will not be shown again
+Restart HA: **Settings → System → Restart**
 
 ---
 
@@ -244,9 +253,56 @@ HA updated. Last polled: 2026-04-08 10:30:00
 
 ---
 
-### Step 5 — Restart HA
+### Step 5 — Add Dashboard Card
 
-**Settings → System → Restart**
+Add the dashboard card now so you have a live visual of prices and automation states straight away.
+
+1. Go to **Overview** in the HA sidebar
+2. Click the **⋮** menu (top right) → **Edit dashboard**
+3. If you want a dedicated dashboard: click **⋮** → **Manage dashboards** → **Add dashboard** → **New dashboard from scratch** → give it a name (e.g. "Energy") → **Create** → then open it from the sidebar and click **Edit**
+4. Click **+ Add Card**
+5. Search for and select **Markdown**
+6. Paste the full card template from the **Dashboard Card** section below into the Content field
+7. Click **Save**
+
+Once added the card shows live Amber prices, battery state and automation statuses updating every 5 minutes.
+
+#### Optional — Add Entity Controls to the Dashboard
+
+You can add toggle and number controls directly to your dashboard so you can enable automations and adjust their settings without navigating to Helpers.
+
+For each group below, add an **Entities** card and include the listed entities.
+
+---
+
+**Block Smart Shift**
+- `Enable Automation: Block Smart Shift`
+- `Amber Block Smart Shift Start`
+- `Amber Block Smart Shift End`
+
+---
+
+**Force Export**
+- `Enable Automation: Force Export`
+- `Amber Min Sell Price`
+- `Amber Min SOC to Sell`
+- `Amber Force Sell Start`
+- `Amber Force Sell End`
+
+---
+
+**Force Charge**
+- `Enable Automation: Force Charge`
+- `Amber Max Buy Price`
+- `Amber Max SOC to Charge`
+- `Amber Force Charge Start`
+- `Amber Force Charge End`
+
+---
+
+**Notifications**
+- `Enable Automation: Force Export Notifications`
+- `Enable Automation: Negative Price Notify`
 
 ---
 
@@ -278,6 +334,7 @@ This is intentional. Keeping them as separate files means HACS updates automatic
 **Recommendation:** leave them as-is and edit via Studio Code Server if needed.
 
 ---
+
 
 ## Controlling Automations
 
