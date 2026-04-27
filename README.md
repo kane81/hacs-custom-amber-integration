@@ -217,7 +217,6 @@ smtp_password: "your-app-password"
 
 Save with **Ctrl+S**.
 
-> **No restart needed for secrets.yaml** — the scripts read `secrets.yaml` directly every time they run. You can edit credentials and immediately re-run the script without restarting HA.
 
 Restart HA: **Settings → System → Restart**
 
@@ -255,250 +254,6 @@ HA updated. Last polled: 2026-04-08 10:30:00
 
 ### Step 5 — Add Dashboard Card
 
-Add the dashboard card now so you have a live visual of prices and automation states straight away.
-
-1. Go to **Overview** in the HA sidebar
-2. Click the **⋮** menu (top right) → **Edit dashboard**
-3. If you want a dedicated dashboard: click **⋮** → **Manage dashboards** → **Add dashboard** → **New dashboard from scratch** → give it a name (e.g. "Energy") → **Create** → then open it from the sidebar and click **Edit**
-4. Click **+ Add Card**
-5. Search for and select **Markdown**
-6. Paste the full card template from the **Dashboard Card** section below into the Content field
-7. Click **Save**
-
-Once added the card shows live Amber prices, battery state and automation statuses updating every 5 minutes.
-
-#### Optional — Add Entity Controls to the Dashboard
-
-You can add toggle and number controls directly to your dashboard so you can enable automations and adjust their settings without navigating to Helpers.
-
-For each group below, add an **Entities** card and include the listed entities.
-
----
-
-**Block Smart Shift**
-- `Enable Automation: Block Smart Shift`
-- `Amber Block Smart Shift Start`
-- `Amber Block Smart Shift End`
-
----
-
-**Force Export**
-- `Enable Automation: Force Export`
-- `Amber Min Sell Price`
-- `Amber Min SOC to Sell`
-- `Amber Force Sell Start`
-- `Amber Force Sell End`
-
----
-
-**Force Charge**
-- `Enable Automation: Force Charge`
-- `Amber Max Buy Price`
-- `Amber Max SOC to Charge`
-- `Amber Force Charge Start`
-- `Amber Force Charge End`
-
----
-
-**Notifications**
-- `Enable Automation: Force Export Notifications`
-- `Enable Automation: Negative Price Notify`
-
----
-
-### Step 6 — Verify Automations
-
-After restart go to **Settings → Automations** and confirm the following automations are listed:
-
-| Automation | Expected state |
-|---|---|
-| Amber Auth on Startup | Enabled — runs on every HA restart |
-| Amber Price Poller | Enabled — polls every 5 minutes |
-| Amber Block Smart Shift Overnight | Listed — off by default |
-| Amber Charge from Grid on Negative Buy Price | Listed — off by default |
-| Amber Force Export at Custom FiT | Listed — off by default |
-| Amber Negative Price Notification | Listed — off by default |
-| Amber Integration - HACS Auto Install | Enabled — handles future updates |
-
-If automations are missing, re-run the install script:
-```bash
-bash /config/custom_components/amber_integration/install.sh
-```
-
-#### ⚠️ Note on the Automation Editor
-
-When you open an automation from **Settings → Automations** you may see a warning that the automation was created outside the UI and cannot be edited here. This is expected — automations stored in separate YAML files under `/config/automations/` appear as read-only in the GUI.
-
-This is intentional. Keeping them as separate files means HACS updates automatically apply changes when you run the install script. If you accept the GUI's offer to migrate them into a single `automations.yaml` file you can then edit them in the UI, but future project updates will no longer apply to them automatically.
-
-**Recommendation:** leave them as-is and edit via Studio Code Server if needed.
-
----
-
-
-## Controlling Automations
-
-The automations in **Settings → Automations** should always remain enabled — do not disable them there. Instead their behaviour is controlled via toggle helpers found at Overview → Devices → Helpers.
-
-Each optional automation has a corresponding **Enable Automation** toggle. When the toggle is OFF the automation is loaded and running but will immediately exit without doing anything. This approach is used instead of HA's built-in automation toggle because the built-in toggle can reset unexpectedly on restart.
-
-### How to enable/disable an automation
-
-The easiest path is:
-
-1. Go to your **Overview** dashboard
-2. Tap **Devices** (top right)
-3. Select the **Helpers** tab
-4. Find the **Enable Automation: xyz** toggle and turn it on or off
-
-> **Tip:** The dashboard card shows the live state of all automations at a glance using icon indicators — 🟢 active · 🔴 enabled/waiting · 🚫 disabled · ⚠️ blocked. This is the easiest way to see what is on without navigating to Helpers. The full helper names are listed in the table below in case the description is cut off in the UI.
-
-| Toggle | Controls | Default |
-|---|---|---|
-| `Enable Automation: Block Smart Shift` | Disables Smart Shift overnight to preserve battery | OFF |
-| `Enable Automation: Force Export` | Discharges battery to grid at high sell prices | OFF |
-| `Enable Automation: Force Export Notifications` | Sends notifications when force export starts/stops/fails | ON |
-| `Enable Automation: Force Charge` | Charges battery from grid when buy price is at or below custom threshold | OFF |
-| `Enable Automation: Negative Price Notify` | Sends notification when buy price goes negative | OFF |
-
----
-
-## Testing the Integration
-
-Before enabling optional automations verify the integration is working correctly end to end.
-
-### Step 1 — Set up the dashboard card
-
-Add the dashboard card first so you can see live prices and automation states at a glance — this makes all subsequent testing much easier.
-
-See the **Dashboard Card** section below for setup instructions. Once added the card will show live Amber prices updating every 5 minutes and all automation toggle states.
-
-### Step 2 — Verify price polling is working
-
-1. Go to **Settings → Automations** and confirm **Amber Price Poller** is listed
-2. Check the dashboard card — buy and sell prices should be updating every 5 minutes
-3. If prices are 0 or stale, run manually in Terminal:
-   ```bash
-   python3 /config/scripts/amber_graphql.py live
-   ```
-
-### Step 3 — Test Smart Shift control
-
-This confirms your credentials are correct and the API can actually control your battery.
-
-1. In Terminal, disable Smart Shift:
-   ```bash
-   python3 /config/scripts/amber_graphql.py smartshift_off
-   ```
-2. Open the **Amber app** on your phone → check that Smart Shift shows as **disabled**
-3. Re-enable Smart Shift:
-   ```bash
-   python3 /config/scripts/amber_graphql.py smartshift_on
-   ```
-4. Check the Amber app again — Smart Shift should show as **enabled**
-
-If both steps work your credentials and API connection are good and it is safe to enable automations.
-
-### Step 4 — Enable your first automation
-
-Start with just one to verify it behaves as expected before enabling others.
-
-Go to **Overview → Devices → Helpers** and turn on **Enable Automation: Negative Price Notify** first — it sends a notification when buy price goes negative and has no battery control, so it's safe to test with.
-
-Watch the dashboard card — the Negative Price Notify row will show 🟢 when active. Monitor it for a day or two, then enable the battery control automations when ready:
-- **Enable Automation: Force Export** — discharges battery at high sell prices
-- **Enable Automation: Block Smart Shift** — disables Smart Shift overnight
-
----
-
-## Configuration
-
-All settings can be changed without editing any YAML files. Changes to price thresholds take effect immediately — no restart needed.
-
-### Option A — Overview → Devices & Services (recommended)
-
-1. Go to your **Overview** dashboard
-2. Click **Devices & Services** (top right corner button)
-3. Select the **Helpers** tab
-4. Search for the helper you want to change (e.g. **Amber Min Sell Price**)
-5. Click it and update the value
-
-### Option B — Overview → Devices → Helpers
-
-**Overview → Devices → Helpers** → find helper by name → click to edit.
-
-### Time Windows
-
-| Helper | Default | Purpose |
-|---|---|---|
-| **Amber Force Sell Start** | 16:00 | Start of force export window |
-| **Amber Force Sell End** | 06:00 | End of force export window (overnight) |
-| **Amber Block Smart Shift Start** | 00:00 | Start of Smart Shift block window |
-| **Amber Block Smart Shift End** | 06:00 | End of Smart Shift block window |
-
-### Custom Force Charge
-
-Forces the battery to charge from the grid when the buy price is at or below a configurable threshold. Useful for pre-charging the battery during cheap or negative price windows before an evening peak.
-
-**How it works:**
-- While the buy price is at or below the threshold and SOC is below the maximum, the automation issues a 60-minute charge override via the Amber Smart Shift API. It re-issues the override silently every 5 minutes to keep it active.
-- When SOC reaches the maximum, it switches to **preserve mode** — holding the charge level without discharging, waiting for the price to rise or the window to close.
-- When the price rises above the threshold or the window ends, the override is cancelled and Smart Shift is restored.
-- Works with negative buy prices — if Amber is paying you to consume power, the automation will charge the battery at any threshold above the negative price.
-
-| Helper | Default | Purpose |
-|---|---|---|
-| **Amber Max Buy Price** | 5c/kWh | Maximum buy price to trigger force charge. Set negative (e.g. -3c) to only charge when prices are truly negative. |
-| **Amber Max SOC to Charge** | 100% | Switch to preserve mode when SOC reaches this level |
-| **Amber Force Charge Start** | 11:00 | Start of the charge window |
-| **Amber Force Charge End** | 13:00 | End of the charge window |
-
-### Price Thresholds
-
-| Helper | Default | Purpose |
-|---|---|---|
-| **Amber Min Sell Price** | $0.15/kWh | Minimum sell price to trigger force export |
-| **Amber Min SOC to Sell** | 10% | Minimum battery SOC before stopping export |
-
----
-
-## Internal State Helpers
-
-The integration uses several `input_boolean` and `input_number` helpers as internal state flags — they are set and cleared automatically by automations and the polling script. They are **not meant to be toggled manually**.
-
-| Helper | Purpose |
-|---|---|
-| `amber_grid_charging_active` | Set when grid charging is in progress |
-| `amber_block_smart_shift_active` | Set when overnight Smart Shift block is active |
-| `amber_force_export_active` | Set when force export is in progress |
-| `amber_battery_offline` | Set when Amber cannot communicate with the battery |
-
-### Hiding them from the UI
-
-The install script hides these automatically using the HA entity registry API. If for any reason they are still visible, you can hide them manually:
-
-1. Go to **Settings → Devices & Services → Entities**
-2. Search for the helper name (e.g. `amber_grid_charging_active`)
-3. Click the entity → click the **⚙️ cog icon**
-4. Toggle **Hidden** to on → **Update**
-
-Hidden helpers still function normally — automations can still read and write them. They just won't appear in Overview → Devices → Helpers or on dashboards.
-
----
-
-## Notifications
-
-By default all notifications go to the **HA Notifications bell (🔔)** in the sidebar — no setup needed.
-
-To add **email** or **mobile push**, open `/config/packages/amber.yaml` in Studio Code Server and uncomment the relevant blocks. The file has full instructions in the comments.
-
-**Finding your mobile device service name:**
-Open **Developer Tools → Actions** and search `notify.mobile_app` — you will see entries like `notify.mobile_app_your_device`.
-
----
-
-## Dashboard Card
-
 The dashboard card shows live Amber prices, current interval cost/earnings, and the status of all automations at a glance.
 
 ![Dashboard Card](images/dashboard_card.jpeg)
@@ -519,6 +274,150 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 ```jinja
 {# --- Amber Prices --- #}
 {% set buy_price    = states('input_number.amber_general_price_actual') | float(0) %}
+{% set sell_price   = states('input_number.amber_feed_in_price_actual') | float(0) %}
+{% set sell_display = (sell_price * 100) | round(0) | int if sell_price >= 0 else (sell_price * 100) | round(0, 'floor') | int %}
+{% set soc          = states('input_number.amber_battery_soc') | float(0) %}
+{# --- Current Interval Cost/Earnings (cents → dollars) --- #}
+{% set import_cost     = states('input_number.amber_import_cost_cents') | float(0) %}
+{% set export_earnings = states('input_number.amber_export_earnings_cents') | float(0) %}
+{% set total_earnings  = states('input_number.amber_total_earnings_cents') | float(0) %}
+{# --- Automation Thresholds --- #}
+{% set min_sell_price  = states('input_number.amber_min_sell_price') | float(0.15) %}
+{% set min_soc_to_sell = states('input_number.amber_min_soc_to_sell') | float(10) %}
+{% set max_buy_price   = states('input_number.amber_max_buy_price_to_charge') | float(0.05) %}
+{% set max_soc_charge  = states('input_number.amber_max_soc_to_charge') | float(100) %}
+{# --- Time Windows (HH:MM only) --- #}
+{% set fit_start      = states('input_datetime.amber_force_sell_on_custom_fit_start')[0:5] %}
+{% set fit_end        = states('input_datetime.amber_force_sell_on_custom_fit_end')[0:5] %}
+{% set ss_block_start = states('input_datetime.amber_block_smart_shift_start')[0:5] %}
+{% set ss_block_end   = states('input_datetime.amber_block_smart_shift_end')[0:5] %}
+{% set fc_start       = states('input_datetime.amber_force_charge_start')[0:5] %}
+{% set fc_end         = states('input_datetime.amber_force_charge_end')[0:5] %}
+{# --- Automation Enable Flags --- #}
+{% set en_force_export  = is_state('input_boolean.amber_enable_force_export_custom_fit',    'on') %}
+{% set en_block_ss      = is_state('input_boolean.amber_enable_block_smart_shift',          'on') %}
+{% set en_neg_notify    = is_state('input_boolean.amber_enable_negative_price_notify',      'on') %}
+{% set en_force_charge  = is_state('input_boolean.amber_enable_force_charge_custom_rate',   'on') %}
+{# --- Automation Session State Flags --- #}
+{% set force_export_active = is_state('input_boolean.amber_force_export_active', 'on') %}
+{% set force_charge_active = is_state('input_boolean.amber_force_charge_active', 'on') %}
+{% set ss_blocked          = is_state('input_boolean.amber_block_smart_shift_active', 'on') %}
+{% set battery_offline     = is_state('input_boolean.amber_battery_offline', 'on') %}
+{# --- Icon logic: 🚫 disabled · 🟢 active · 🔴 enabled/waiting · ⚠️ blocked --- #}
+{% set ic_force_export = '⚠️' if (battery_offline and en_force_export) else ('🚫' if not en_force_export else ('🟢' if force_export_active else '🔴')) %}
+{% set ic_force_charge = '⚠️' if (battery_offline and en_force_charge) else ('🚫' if not en_force_charge else ('🟢' if force_charge_active else '🔴')) %}
+{% set ic_block_ss     = '⚠️' if (battery_offline and en_block_ss)     else ('🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴')) %}
+{% set ic_neg_notify   = '🚫' if not en_neg_notify   else '🟢' %}
+
+**💲 Amber**
+&nbsp;&nbsp;Buy **{{ (buy_price * 100) | round(0) | int }}c** &nbsp;&nbsp; Sell **{{ sell_display }}c** &nbsp;&nbsp; SOC **{{ '⚠️' if battery_offline else (soc | round(0) | int ~ '%') }}**
+{{ '&nbsp;&nbsp;⚠️ **Amber Battery Connection Offline**' if battery_offline else '' }}
+&nbsp;&nbsp;Import **${{ '%.2f' | format(import_cost / 100) }}** &nbsp;&nbsp; Export **${{ '%.2f' | format((export_earnings / 100) | abs) }}** &nbsp;&nbsp; {{ '💰 Credit **$' ~ '%.2f' | format(total_earnings / 100) ~ '**' if total_earnings > 0 else '💸 Expense **$' ~ '%.2f' | format((total_earnings / 100) | abs) ~ '**' if total_earnings < 0 else '**$0.00**' }}
+&nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
+
+**🤖 Automations**
+&nbsp;&nbsp;{{ ic_force_export }} **Export** >= {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
+&nbsp;&nbsp;{{ ic_force_charge }} **Charge** <= {{ (max_buy_price * 100) | round(0) | int }}c · Max SOC {{ max_soc_charge | int }}% · {{ fc_start }}–{{ fc_end }}
+&nbsp;&nbsp;{{ ic_block_ss }} **Block Smart Shift** - {{ ss_block_start }}–{{ ss_block_end }}{{ ' · Active' if ss_blocked else '' }}
+&nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify**
+```
+
+---
+
+#### Optional — Add Entity Controls to the Dashboard
+
+Add toggle and number controls directly to your dashboard so you can control automations and adjust settings without navigating to Helpers. The automations in **Settings → Automations** should always remain enabled — control is via the **Enable Automation** toggles below. When OFF, the automation runs but exits immediately without doing anything.
+
+The dashboard card shows live automation state using icon indicators — 🟢 active · 🔴 enabled/waiting · 🚫 disabled · ⚠️ blocked by battery offline.
+
+For each group below, add an **Entities** card and include the listed entities.
+
+> **Tip:** You can adjust the width of entity cards in edit mode — click the card → drag the resize handle, or use **Layout** options to set columns.
+
+---
+
+**Price Poller**
+- `Amber Price Poller` — polls every 5 minutes and 30 seconds to get actual pricing rather than an estimate
+
+---
+
+**Block Smart Shift** — disables Smart Shift overnight to preserve battery charge for peak periods
+- `Enable Automation: Block Smart Shift`
+- `Amber Block Smart Shift Start`
+- `Amber Block Smart Shift End`
+
+---
+
+**Force Export** — discharges battery to grid when sell price is at or above your threshold
+- `Enable Automation: Force Export`
+- `Amber Min Sell Price` — minimum sell price to trigger export
+- `Amber Min SOC to Sell` — minimum battery % before stopping export
+- `Amber Force Sell Start`
+- `Amber Force Sell End`
+
+---
+
+**Force Charge** — charges battery from grid when buy price is at or below your threshold; switches to preserve mode at max SOC
+- `Enable Automation: Force Charge`
+- `Amber Max Buy Price` — maximum buy price to trigger charging
+- `Amber Max SOC to Charge` — stop charging at this battery %
+- `Amber Force Charge Start`
+- `Amber Force Charge End`
+
+---
+
+**Notifications**
+- `Enable Automation: Force Export Notifications` — notifications when force export starts, stops or fails
+- `Enable Automation: Negative Price Notify` — notification when buy price goes negative
+
+---
+
+#### ⚠️ Note on the Automation Editor
+
+When you open an automation from **Settings → Automations** you may see a warning that the automation was created outside the UI and cannot be edited here. This is expected — automations stored in YAML files under `/config/automations/` appear as read-only in the GUI. Leave them as-is.
+
+---
+
+
+
+
+## Testing the Integration
+
+Before enabling optional automations verify the integration is working correctly end to end.
+
+### Step 1 — Verify price polling is working
+
+1. Go to **Settings → Automations** and confirm **Amber Price Poller** is listed
+2. Check the dashboard card — buy and sell prices should be updating every 5 minutes
+3. If prices are 0 or stale, run manually in Terminal:
+   ```bash
+   python3 /config/scripts/amber_graphql.py live
+   ```
+
+### Step 2 — Test Smart Shift control
+
+This confirms your credentials are correct and the API can actually control your battery.
+
+1. In Terminal, disable Smart Shift:
+   ```bash
+   python3 /config/scripts/amber_graphql.py smartshift_off
+   ```
+2. Open the **Amber app** on your phone → check that Smart Shift shows as **disabled**
+3. Re-enable Smart Shift:
+   ```bash
+   python3 /config/scripts/amber_graphql.py smartshift_on
+   ```
+4. Check the Amber app again — Smart Shift should show as **enabled**
+
+If both steps work your credentials and API connection are good and it is safe to enable automations.
+
+### Step 3 — Enable your first automation
+
+Start with just one to verify it behaves as expected before enabling others.
+
+Go to **Overview → Devices → Helpers** and turn on **Enable Automation: Negative Price Notify** first — it sends a notification when buy price goes negative and has no battery control, so it's safe to test with.
+
+Watch the dashboard card — the Negative Price Notify row will show 🟢 when active.mber.amber_general_price_actual') | float(0) %}
 {% set sell_price   = states('input_number.amber_feed_in_price_actual') | float(0) %}
 {% set sell_display = (sell_price * 100) | round(0) | int if sell_price >= 0 else (sell_price * 100) | round(0, 'floor') | int %}
 {% set soc          = states('input_number.amber_battery_soc') | float(0) %}
