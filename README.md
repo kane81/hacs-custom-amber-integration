@@ -229,14 +229,13 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 
 ### Adding the card
 
-1. Go to **Settings → Dashboards**
-2. Open the dashboard you want to add the card to (or create a new one with **Add Dashboard**)
-3. Click the **pencil icon** (top right) to enter edit mode
+1. Go to **Overview** in the HA sidebar
+2. Click the **⋮** menu (top right) → **Edit dashboard**
+3. If you want a dedicated dashboard: click **⋮** → **Manage dashboards** → **Add dashboard** → **New dashboard from scratch** → give it a name → **Create** → open it from the sidebar and click **Edit**
 4. Click **+ Add Card**
-5. Scroll down and select **Markdown**
-6. Delete any placeholder text in the content field
-7. Paste the full template below
-8. Click **Save**
+5. Search for and select **Markdown**
+6. Paste the full card template below into the Content field
+7. Click **Save**
 
 ```jinja
 {# --- Amber Prices --- #}
@@ -294,8 +293,6 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 #### Optional — Add Entity Controls to the Dashboard
 
 Add toggle and number controls directly to your dashboard so you can control automations and adjust settings without navigating to Helpers. The automations in **Settings → Automations** should always remain enabled — control is via the **Enable Automation** toggles below. When OFF, the automation runs but exits immediately without doing anything.
-
-The dashboard card shows live automation state using icon indicators — 🟢 active · 🔴 enabled/waiting · 🚫 disabled · ⚠️ blocked by battery offline.
 
 For each group below, add an **Entities** card and include the listed entities.
 
