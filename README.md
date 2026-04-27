@@ -10,55 +10,7 @@
 
 > **Home Assistant integration that connects to Amber Electric's Smart Shift API to automate battery charging, discharging and solar export based on real-time electricity prices.**
 
-```mermaid
-flowchart TD
-    AmberAPI["☁️ Amber Electric API\nGraphQL · SmartShiftLive"]
-    AuthPy["🔑 amber_auth.py\nAWS Cognito login · token cache\nauto-refresh every hour"]
-    GraphQLPy["⚙️ amber_graphql.py\nlive · discharge · charge · cancel · smartshift"]
-    Helpers["📦 HA input_number helpers\nbuy price · sell price · SOC\nimport cost · export earnings · last polled"]
-    ForceExport["📤 Force Export\nhigh sell price"]
-    GridCharge["🔋 Grid Charge\nnegative buy price"]
-    BlockSS["🌙 Block Smart Shift\novernight window"]
-    PriceNotify["🔔 Price Notify\nalerts"]
-    SmartShiftAPI["☁️ Amber Smart Shift API\ndischarge · charge · smartshift on/off"]
-    Battery["🔋 Your Battery\nSmart Shift enrolled"]
-    Notify["📣 notify.notification\nHA bell · email · mobile"]
-
-    AmberAPI -->|"every 5 min"| GraphQLPy
-    AuthPy -->|"token"| GraphQLPy
-    GraphQLPy -->|"updates"| Helpers
-    Helpers --> ForceExport
-    Helpers --> GridCharge
-    Helpers --> BlockSS
-    Helpers --> PriceNotify
-    ForceExport -->|"discharge"| SmartShiftAPI
-    GridCharge -->|"charge"| SmartShiftAPI
-    BlockSS -->|"smartshift on/off"| SmartShiftAPI
-    SmartShiftAPI --> Battery
-    ForceExport --> Notify
-    GridCharge --> Notify
-    BlockSS --> Notify
-    PriceNotify --> Notify
-```
-
----
-
-## 💡 Before You Start — Test in a Virtual Machine
-
-If you are new to editing Home Assistant configuration files, it is strongly recommended to **set up a virtual machine running Home Assistant** before making changes to your live installation.
-
-**[Setting up Home Assistant in a Virtual Machine](https://www.youtube.com/watch?v=GDlUzAsEO30)**
-
-When configuring the VM network adapter use **Bridged Adapter** and **Paravirtualized Network (virtio-net)** — without this, downloads inside the VM can hang for 20+ minutes.
-
----
-
-## 🚧 Early Beta — In Development
-
-- Automations may behave unexpectedly in edge cases
-- Breaking changes may occur between versions
-- Monitor your system closely after installation
-- Feedback welcome via [GitHub Issues](https://github.com/kane81/hacs-custom-amber-integration/issues)
+📐 [Click here to view the Architecture Diagram](images/architecture.png)
 
 ---
 
@@ -74,6 +26,14 @@ When configuring the VM network adapter use **Bridged Adapter** and **Paravirtua
 ## ⚠️ Disclaimer
 
 This project uses Amber Electric's internal API which is not publicly documented or officially supported. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
+
+### New to Home Assistant?
+
+If you are new to editing Home Assistant configuration files it is strongly recommended to test in a virtual machine before making changes to your live installation.
+
+**[Setting up Home Assistant in a Virtual Machine](https://www.youtube.com/watch?v=GDlUzAsEO30)**
+
+When configuring the VM network adapter use **Bridged Adapter** and **Paravirtualized Network (virtio-net)** — without this, downloads inside the VM can hang for 20+ minutes.
 
 ---
 
@@ -386,7 +346,9 @@ When you open an automation from **Settings → Automations** you may see a warn
 
 ## Testing the Integration
 
-Before enabling optional automations verify the integration is working correctly end to end.
+📐 [Click here to view the Architecture Diagram](images/architecture.png)
+
+Optional — the following steps can be used to verify the integration is working end to end.
 
 ### Step 1 — Verify price polling is working
 
