@@ -225,7 +225,7 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 
 ![Dashboard Card](images/dashboard_card.jpeg)
 
-**Icon legend:** 🟢 enabled & active · 🔴 enabled, waiting for conditions · 🚫 disabled
+**Icon legend:** 🟢 enabled & active · 🔴 enabled, waiting for conditions · 🚫 disabled · ⚠️ blocked
 
 ### Adding the card
 
