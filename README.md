@@ -1,5 +1,8 @@
 <table><tr><td><img src="brand/icon.png" width="80"/></td><td><h1>Home Assistant Custom Amber Electric Integration</h1></td></tr></table>
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/kane81)
+
+
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/release/kane81/hacs-custom-amber-integration.svg)](https://github.com/kane81/hacs-custom-amber-integration/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -91,7 +94,7 @@ All optional automations are **off by default** — enable them individually via
 
 ## Installation
 
-### Step 0 — Install Prerequisites
+### Step 1 — Install Prerequisites
 
 #### Install HACS (if not already installed)
 
@@ -106,7 +109,7 @@ HACS (Home Assistant Community Store) is required to install this integration. I
 7. Search for **HACS** → follow the setup steps (requires a GitHub account)
 8. Once configured, **HACS** will appear in your left sidebar
 
-#### Step 0b — Install Required Add-ons
+#### Step 1b — Install Required Add-ons
 
 You also need two add-ons from the **official Home Assistant Add-on Store**.
 
@@ -131,7 +134,7 @@ Used to run the install script and test authentication. Required for Steps 1, 4 
 
 ---
 
-### Step 1 — Add via HACS
+### Step 2 — Add via HACS
 
 1. Open **HACS** in your HA sidebar
 2. Click **⋮** (top right) → **Custom repositories**
@@ -164,7 +167,7 @@ If you see any ⚠️ warnings about missing `configuration.yaml` lines, follow 
 
 ---
 
-### Step 2 — Update configuration.yaml
+### Step 3 — Update configuration.yaml
 
 Open **Studio Code Server** from the sidebar. In the file explorer on the left open `/config/configuration.yaml`.
 
@@ -189,9 +192,9 @@ Save with **Ctrl+S**.
 
 ---
 
-### Step 3 — Add Credentials
+### Step 4 — Add Credentials
 
-#### 1. Get your HA Long-Lived Access Token
+#### Step 4a — Get your HA Long-Lived Access Token
 
 The integration needs a token to communicate with Home Assistant's API.
 
@@ -201,7 +204,7 @@ The integration needs a token to communicate with Home Assistant's API.
 4. Name it `amber_smartshift` and click **OK**
 5. **Copy the token immediately** — it will not be shown again
 
-#### 2. Add credentials to secrets.yaml
+#### Step 4b — Add credentials to secrets.yaml
 
 In **Studio Code Server**, open `/config/secrets.yaml` and add:
 
@@ -222,7 +225,7 @@ Restart HA: **Settings → System → Restart**
 
 ---
 
-### Step 4 — Test Authentication
+### Step 5 — Test Authentication
 
 ```bash
 python3 /config/scripts/amber_auth.py
@@ -252,7 +255,7 @@ HA updated. Last polled: 2026-04-08 10:30:00
 
 ---
 
-### Step 5 — Add Dashboard Card
+### Step 6 — Add Dashboard Card
 
 The dashboard card shows live Amber prices, current interval cost/earnings, and the status of all automations at a glance.
 
@@ -410,63 +413,6 @@ This confirms your credentials are correct and the API can actually control your
 4. Check the Amber app again — Smart Shift should show as **enabled**
 
 If both steps work your credentials and API connection are good and it is safe to enable automations.
-
-### Step 3 — Enable your first automation
-
-Start with just one to verify it behaves as expected before enabling others.
-
-Go to **Overview → Devices → Helpers** and turn on **Enable Automation: Negative Price Notify** first — it sends a notification when buy price goes negative and has no battery control, so it's safe to test with.
-
-Watch the dashboard card — the Negative Price Notify row will show 🟢 when active.mber.amber_general_price_actual') | float(0) %}
-{% set sell_price   = states('input_number.amber_feed_in_price_actual') | float(0) %}
-{% set sell_display = (sell_price * 100) | round(0) | int if sell_price >= 0 else (sell_price * 100) | round(0, 'floor') | int %}
-{% set soc          = states('input_number.amber_battery_soc') | float(0) %}
-{# --- Current Interval Cost/Earnings (cents → dollars) --- #}
-{% set import_cost     = states('input_number.amber_import_cost_cents') | float(0) %}
-{% set export_earnings = states('input_number.amber_export_earnings_cents') | float(0) %}
-{% set total_earnings  = states('input_number.amber_total_earnings_cents') | float(0) %}
-{# --- Automation Thresholds --- #}
-{% set min_sell_price  = states('input_number.amber_min_sell_price') | float(0.15) %}
-{% set min_soc_to_sell = states('input_number.amber_min_soc_to_sell') | float(10) %}
-{% set max_buy_price   = states('input_number.amber_max_buy_price_to_charge') | float(0.05) %}
-{% set max_soc_charge  = states('input_number.amber_max_soc_to_charge') | float(100) %}
-{# --- Time Windows (HH:MM only) --- #}
-{% set fit_start      = states('input_datetime.amber_force_sell_on_custom_fit_start')[0:5] %}
-{% set fit_end        = states('input_datetime.amber_force_sell_on_custom_fit_end')[0:5] %}
-{% set ss_block_start = states('input_datetime.amber_block_smart_shift_start')[0:5] %}
-{% set ss_block_end   = states('input_datetime.amber_block_smart_shift_end')[0:5] %}
-{% set fc_start       = states('input_datetime.amber_force_charge_start')[0:5] %}
-{% set fc_end         = states('input_datetime.amber_force_charge_end')[0:5] %}
-{# --- Automation Enable Flags --- #}
-{% set en_force_export  = is_state('input_boolean.amber_enable_force_export_custom_fit',    'on') %}
-{% set en_block_ss      = is_state('input_boolean.amber_enable_block_smart_shift',          'on') %}
-{% set en_neg_notify    = is_state('input_boolean.amber_enable_negative_price_notify',      'on') %}
-{% set en_force_charge  = is_state('input_boolean.amber_enable_force_charge_custom_rate',   'on') %}
-{# --- Automation Session State Flags --- #}
-{% set force_export_active = is_state('input_boolean.amber_force_export_active', 'on') %}
-{% set force_charge_active = is_state('input_boolean.amber_force_charge_active', 'on') %}
-{% set ss_blocked          = is_state('input_boolean.amber_block_smart_shift_active', 'on') %}
-{% set battery_offline     = is_state('input_boolean.amber_battery_offline', 'on') %}
-{# --- Icon logic: 🚫 disabled · 🟢 active · 🔴 enabled/waiting · ⚠️ blocked --- #}
-{% set ic_force_export = '⚠️' if (battery_offline and en_force_export) else ('🚫' if not en_force_export else ('🟢' if force_export_active else '🔴')) %}
-{% set ic_force_charge = '⚠️' if (battery_offline and en_force_charge) else ('🚫' if not en_force_charge else ('🟢' if force_charge_active else '🔴')) %}
-{% set ic_block_ss     = '⚠️' if (battery_offline and en_block_ss)     else ('🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴')) %}
-{% set ic_neg_notify   = '🚫' if not en_neg_notify   else '🟢' %}
-
-**💲 Amber**
-&nbsp;&nbsp;Buy **{{ (buy_price * 100) | round(0) | int }}c** &nbsp;&nbsp; Sell **{{ sell_display }}c** &nbsp;&nbsp; SOC **{{ '⚠️' if battery_offline else (soc | round(0) | int ~ '%') }}**
-{{ '&nbsp;&nbsp;⚠️ **Amber Battery Connection Offline**' if battery_offline else '' }}
-&nbsp;&nbsp;Import **${{ '%.2f' | format(import_cost / 100) }}** &nbsp;&nbsp; Export **${{ '%.2f' | format((export_earnings / 100) | abs) }}** &nbsp;&nbsp; {{ '💰 Credit **$' ~ '%.2f' | format(total_earnings / 100) ~ '**' if total_earnings > 0 else '💸 Expense **$' ~ '%.2f' | format((total_earnings / 100) | abs) ~ '**' if total_earnings < 0 else '**$0.00**' }}
-&nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
-
-**🤖 Automations**
-&nbsp;&nbsp;{{ ic_force_export }} **Export** >= {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
-&nbsp;&nbsp;{{ ic_force_charge }} **Charge** <= {{ (max_buy_price * 100) | round(0) | int }}c · Max SOC {{ max_soc_charge | int }}% · {{ fc_start }}–{{ fc_end }}
-&nbsp;&nbsp;{{ ic_block_ss }} **Block Smart Shift** - {{ ss_block_start }}–{{ ss_block_end }}{{ ' · Active' if ss_blocked else '' }}
-&nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify**
-```
-
----
 
 ## Manual Commands
 
