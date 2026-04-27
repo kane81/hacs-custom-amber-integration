@@ -10,6 +10,10 @@
 
 > **Home Assistant integration that connects to Amber Electric's Smart Shift API to automate battery charging, discharging and solar export based on real-time electricity prices.**
 
+> **Battery agnostic** — works with any battery enrolled in Amber Smart Shift. The integration controls the battery via the Amber API, not directly, so no local battery connection is required.
+
+> ☀️ **Have a GoodWe solar inverter?** Add automatic solar curtailment when prices are negative with the companion project: [hacs-goodwe-sems-curtailment](https://github.com/kane81/hacs-goodwe-sems-curtailment)
+
 📐 [Click here to view the Architecture Diagram](images/architecture.png)
 
 ---
