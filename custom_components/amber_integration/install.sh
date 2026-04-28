@@ -127,6 +127,74 @@ if ! grep -q "^ha_url:" $SECRETS; then
     echo "   ✅ ha_url set to http://localhost:8123 (default)"
 fi
 
+echo ""
+echo "📧 Email Notifications (optional)"
+echo "   Notifications go to the HA bell by default."
+echo "   To also receive email alerts enter your SMTP details."
+echo "   You will need: email address, SMTP server and password."
+echo "   (Skip now and configure later — see README Email Notifications section)"
+echo ""
+read -r -p "   Set up email notifications now? (y/N): " setup_email
+if [[ "$setup_email" =~ ^[Yy]$ ]]; then
+    prompt_if_missing "smtp_username" "Email address (e.g. you@gmail.com)"
+    prompt_if_missing "smtp_password" "Email password or app password"
+
+    # Get the saved email address to use as recipient
+    SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
+
+    # Uncomment the SMTP block in amber.yaml and add service to group
+    PKG=/config/packages/amber.yaml
+    if grep -q "# - name: amber_smtp" $PKG; then
+        python3 << PYEOF
+content = open("$PKG").read()
+
+# Uncomment the SMTP notify block
+content = content.replace(
+    "  # Then add \"- service: amber_smtp\" to the group services above.\n  #\n"
+    "  # - name: amber_smtp\n"
+    "  #   platform: smtp\n"
+    "  #   server: smtp.gmail.com\n"
+    "  #   port: 587\n"
+    "  #   timeout: 15\n"
+    "  #   sender: !secret smtp_username\n"
+    "  #   encryption: starttls\n"
+    "  #   username: !secret smtp_username\n"
+    "  #   password: !secret smtp_password\n"
+    "  #   recipient:\n"
+    "  #     - \"your@email.com\"    # ← your email address\n"
+    "  #   sender_name: \"Home Assistant - Amber\"",
+    "  - name: amber_smtp\n"
+    "    platform: smtp\n"
+    "    server: smtp.gmail.com\n"
+    "    port: 587\n"
+    "    timeout: 15\n"
+    "    sender: !secret smtp_username\n"
+    "    encryption: starttls\n"
+    "    username: !secret smtp_username\n"
+    "    password: !secret smtp_password\n"
+    "    recipient:\n"
+    "      - \"$SMTP_USER\"\n"
+    "    sender_name: \"Home Assistant - Amber\""
+)
+
+# Add amber_smtp to the notification group
+content = content.replace(
+    "      - service: persistent_notification",
+    "      - service: persistent_notification\n      - service: amber_smtp"
+)
+
+open("$PKG", "w").write(content)
+print("done")
+PYEOF
+        echo "   ✅ Email credentials saved and amber.yaml updated"
+        echo "   Reload YAML to apply: Developer Tools → YAML → Reload All"
+    else
+        echo "   ✅ Email credentials saved (SMTP already configured in amber.yaml)"
+    fi
+else
+    echo "   Skipped — see Email Notifications in the README to configure later."
+fi
+
 HA_URL=$(grep "^ha_url:" $SECRETS 2>/dev/null | sed 's/ha_url: *//' | tr -d '"' || echo "http://localhost:8123")
 HA_TOKEN=$(grep "^ha_long_lived_token:" $SECRETS 2>/dev/null | sed 's/ha_long_lived_token: *//' | tr -d '"')
 

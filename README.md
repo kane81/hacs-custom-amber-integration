@@ -122,7 +122,19 @@ You will be prompted for your credentials — have these ready before running:
    ✅ ha_long_lived_token saved to secrets.yaml
 ```
 
-**2. Configuration and defaults**
+**2. Email notifications (optional)**
+
+```
+📧 Email Notifications (optional)
+   Notifications go to the HA bell by default.
+   To also receive email alerts enter your SMTP details.
+
+   Set up email notifications now? (y/N): 
+```
+
+Answer **y** if you want email alerts, or press Enter to skip — you can add this later via the **Email Notifications** section below.
+
+**3. Configuration and defaults**
 
 The script automatically updates `configuration.yaml`, reloads HA YAML and sets default helper values. No action required — just wait for it to complete.
 
@@ -152,7 +164,14 @@ The output should end with:
 ✅ Install complete!
 ```
 
-> **After this first run** the `amber_hacs_auto_install` automation handles all future HACS updates automatically — you will never need to run the script manually again.
+> **After this first run** the `amber_hacs_auto_install` automation handles all future HACS updates automatically.
+
+> **On every HA restart** the automation runs a lightweight sync (copies files only) — no prompts, no pip installs. Your settings are never touched.
+
+> **To re-run the full installer** at any time (e.g. to set up email, reconfigure credentials, or re-add the dashboard card):
+> ```bash
+> bash /config/custom_components/amber_integration/install.sh
+> ```
 
 ---
 
@@ -215,7 +234,7 @@ For each group below, add an **Entities** card and include the listed entities.
 
 ---
 
-#### Configuring the Amber Integration Using the Dashboard Card
+## Configuring the Amber Integration Using the Dashboard Card
 
 Below explains the automations and configuration options of the Custom Amber Integration.
 
@@ -308,6 +327,71 @@ python3 /config/scripts/amber_graphql.py smartshift_on
 python3 /config/scripts/amber_graphql.py smartshift_off
 python3 /config/scripts/amber_auth.py                  # manually refresh auth token
 ```
+
+## Email Notifications
+
+By default all notifications go to the HA notification bell (🔔) in the top right of the UI. You can optionally have them emailed to you as well.
+
+**What you will need:**
+- Your email address
+- Your email password or app password — Gmail requires an [App Password](https://myaccount.google.com/apppasswords) if you have 2FA enabled
+
+> You can always add this later — notifications will continue going to the HA bell in the meantime.
+
+### Set up during install (recommended)
+
+Answer **y** when the install script asks about email notifications — it will prompt for your credentials, update `secrets.yaml`, automatically uncomment the SMTP block in `amber.yaml` and reload HA YAML. No manual steps needed.
+
+### Set up manually
+
+**Step 1 — Add credentials to secrets.yaml**
+
+Open `/config/secrets.yaml` in an editor and add:
+
+```yaml
+smtp_username: "your@gmail.com"
+smtp_password: "your-app-password"
+```
+
+**Step 2 — Uncomment the email notify block in amber.yaml**
+
+Open `/config/packages/amber.yaml` and uncomment the SMTP section near the bottom:
+
+```yaml
+  - name: amber_smtp
+    platform: smtp
+    server: smtp.gmail.com
+    port: 587
+    timeout: 15
+    sender: !secret smtp_username
+    encryption: starttls
+    username: !secret smtp_username
+    password: !secret smtp_password
+    recipient:
+      - "your@gmail.com"
+    sender_name: "Home Assistant - Amber"
+```
+
+**Step 3 — Add amber_smtp to the notification group**
+
+In the same file find the `notify:` group and add `amber_smtp`:
+
+```yaml
+notify:
+  - name: notification
+    platform: group
+    services:
+      - service: persistent_notification
+      - service: amber_smtp   # ← add this line
+```
+
+**Step 4 — Reload YAML**
+
+**Developer Tools → YAML → Reload All**
+
+> If you ran the full install script after making these changes it reloads automatically — no manual reload needed.
+
+All future notifications will now go to both the HA bell and your email.
 
 ---
 
