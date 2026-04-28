@@ -197,8 +197,8 @@ reload_yaml() {
     echo "🔄 Reloading HA YAML configuration..."
     result=$(ha_post "services/homeassistant/reload_all" "{}")
     if [ "$result" = "200" ]; then
-        echo "   ✅ YAML reloaded successfully"
-        sleep 5
+        echo "   ✅ YAML reloaded — waiting 15 seconds for helpers to initialise..."
+        sleep 15
     else
         echo "   ⚠️  Could not reload YAML (HTTP $result)"
     fi
