@@ -81,7 +81,7 @@ Open: **Settings → Add-ons → Add-on Store**
 
 #### Studio Code Server — file editor
 
-Used to edit `secrets.yaml` directly in your browser. Required for Step 4.
+Optional — useful for viewing or manually editing config files like `secrets.yaml`.
 
 1. Search for `Studio Code Server` → **Install**
 2. Go to the **Info** tab → **Start**
@@ -98,7 +98,7 @@ Used to run the install script and test authentication. Required for Steps 1, 4 
 
 ---
 
-### Step 2 — Add via HACS
+### Step 2 — Install Custom Amber Project
 
 1. Open **HACS** in your HA sidebar
 2. Click **⋮** (top right) → **Custom repositories**
@@ -108,68 +108,36 @@ Used to run the install script and test authentication. Required for Steps 1, 4 
 
 HACS downloads the integration into `/config/custom_components/amber_integration/`.
 
-**This is a one-time step.** Open **Terminal & SSH** and run the install script:
+**Open Terminal & SSH and run the install script:**
 
 ```bash
 bash /config/custom_components/amber_integration/install.sh
 ```
 
 The script will:
-- Install python3 and pip3 if not already present
-- Install the pycognito Python library
+- Install python3, pip3 and pycognito if not already present
 - Copy all automations, scripts, packages and templates to `/config/`
-- Check your `configuration.yaml` for any missing lines and tell you exactly what to fix
+- Automatically update `configuration.yaml` with the required entries
+- Prompt you for your credentials and save them to `secrets.yaml`
+- Reload HA YAML and set default helper values
+- Can automatically add a dashboard card to your Overview dashboard — answer **Y** when prompted
+- Restart HA to apply all changes
+
+> **After this first run** the `amber_hacs_auto_install` automation handles all future HACS updates automatically.
+
+**Before running** you will need your HA Long-Lived Access Token:
+1. Click your **profile avatar** (bottom left of the HA sidebar)
+2. Scroll down to **Long-Lived Access Tokens** → **Create Token**
+3. Name it `amber_smartshift` — **copy it immediately**, it will not be shown again
 
 **Verify it completed successfully** — the output should end with:
 ```
 ✅ Install complete!
 ```
 
-If you see any ⚠️ warnings about missing `configuration.yaml` lines, follow the instructions printed by the script before continuing.
-
-> **After this first run** the `amber_hacs_auto_install` automation is installed and active. All future HACS updates will trigger the install script automatically — you will never need to run it manually again.
-
 ---
 
-### Step 3 — Restart HA
-
-The install script automatically updates `configuration.yaml` with the required entries — no manual editing needed. Just restart HA to apply the changes:
-
-**Settings → System → Restart**
-
-> If anything was missed the script will have printed a warning in the terminal output. You can re-run it at any time:
-> ```bash
-> bash /config/custom_components/amber_integration/install.sh
-> ```
-
----
-
-### Step 4 — Add Credentials
-
-The install script will prompt you for your credentials when it runs — no manual file editing needed.
-
-You will be asked for:
-- **Amber Electric email** — the email you use to log into the Amber app
-- **Amber Electric password** — the password you use to log into the Amber app
-- **HA Long-Lived Access Token** — get this from your HA profile:
-  1. Click your **profile avatar** (bottom left of the HA sidebar)
-  2. Scroll down to **Long-Lived Access Tokens** → **Create Token**
-  3. Name it `amber_smartshift` — **copy it immediately**, it will not be shown again
-
-All values are saved directly to `/config/secrets.yaml`. If you skipped any prompts you can add them manually to that file later.
-
-> **Optional** — to add email notifications, also add to `secrets.yaml`:
-> ```yaml
-> smtp_username: "your@gmail.com"
-> smtp_password: "your-app-password"
-> ```
-
-
-Restart HA: **Settings → System → Restart**
-
----
-
-### Step 5 — Test Authentication
+### Step 3 — Test Authentication
 
 ```bash
 python3 /config/scripts/amber_auth.py
@@ -199,7 +167,7 @@ HA updated. Last polled: 2026-04-08 10:30:00
 
 ---
 
-### Step 6 — Add Dashboard Card
+### Step 4 — Dashboard Card
 
 The dashboard card shows live Amber prices, current interval cost/earnings, and the status of all automations at a glance.
 
@@ -207,81 +175,26 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 
 **Icon legend:** 🟢 enabled & active · 🔴 enabled, waiting for conditions · 🚫 disabled · ⚠️ blocked
 
-### Adding the card
+### Manually Adding the card
 
-The install script automatically adds the dashboard card to your Overview dashboard — just answer **Y** when prompted during install.
+> **Note:** Recent versions of Home Assistant no longer allow Markdown cards on the default Overview dashboard. You need to create a new dashboard first: **Settings → Dashboards → Add Dashboard → New dashboard from scratch**.
 
-If you prefer to add it manually or want to add it to a different dashboard:
+The install script automatically adds the card to your Overview dashboard — answer **Y** when prompted. To add it manually or to a different dashboard:
 
-1. Go to **Overview** in the HA sidebar
-2. Click the **⋮** menu (top right) → **Edit dashboard**
-3. To create a dedicated dashboard: click **⋮** → **Manage dashboards** → **Add dashboard** → **New dashboard from scratch** → give it a name → **Create** → open it from the sidebar and click **Edit**
-4. Click **+ Add Card** → search for and select **Markdown**
-5. Copy the card template from [`custom_components/amber_integration/dashboard_card.txt`](custom_components/amber_integration/dashboard_card.txt) and paste into the Content field
-6. Click **Save**
-
-```jinja
-{# --- Amber Prices --- #}
-{% set buy_price    = states('input_number.amber_general_price_actual') | float(0) %}
-{% set sell_price   = states('input_number.amber_feed_in_price_actual') | float(0) %}
-{% set sell_display = (sell_price * 100) | round(0) | int if sell_price >= 0 else (sell_price * 100) | round(0, 'floor') | int %}
-{% set soc          = states('input_number.amber_battery_soc') | float(0) %}
-{# --- Current Interval Cost/Earnings (cents → dollars) --- #}
-{% set import_cost     = states('input_number.amber_import_cost_cents') | float(0) %}
-{% set export_earnings = states('input_number.amber_export_earnings_cents') | float(0) %}
-{% set total_earnings  = states('input_number.amber_total_earnings_cents') | float(0) %}
-{# --- Automation Thresholds --- #}
-{% set min_sell_price  = states('input_number.amber_min_sell_price') | float(0.15) %}
-{% set min_soc_to_sell = states('input_number.amber_min_soc_to_sell') | float(10) %}
-{% set max_buy_price   = states('input_number.amber_max_buy_price_to_charge') | float(0.05) %}
-{% set max_soc_charge  = states('input_number.amber_max_soc_to_charge') | float(100) %}
-{# --- Time Windows (HH:MM only) --- #}
-{% set fit_start      = states('input_datetime.amber_force_sell_on_custom_fit_start')[0:5] %}
-{% set fit_end        = states('input_datetime.amber_force_sell_on_custom_fit_end')[0:5] %}
-{% set ss_block_start = states('input_datetime.amber_block_smart_shift_start')[0:5] %}
-{% set ss_block_end   = states('input_datetime.amber_block_smart_shift_end')[0:5] %}
-{% set fc_start       = states('input_datetime.amber_force_charge_start')[0:5] %}
-{% set fc_end         = states('input_datetime.amber_force_charge_end')[0:5] %}
-{# --- Automation Enable Flags --- #}
-{% set en_force_export  = is_state('input_boolean.amber_enable_force_export_custom_fit',    'on') %}
-{% set en_block_ss      = is_state('input_boolean.amber_enable_block_smart_shift',          'on') %}
-{% set en_neg_notify    = is_state('input_boolean.amber_enable_negative_price_notify',      'on') %}
-{% set en_force_charge  = is_state('input_boolean.amber_enable_force_charge_custom_rate',   'on') %}
-{# --- Automation Session State Flags --- #}
-{% set force_export_active = is_state('input_boolean.amber_force_export_active', 'on') %}
-{% set force_charge_active = is_state('input_boolean.amber_force_charge_active', 'on') %}
-{% set ss_blocked          = is_state('input_boolean.amber_block_smart_shift_active', 'on') %}
-{% set battery_offline     = is_state('input_boolean.amber_battery_offline', 'on') %}
-{# --- Icon logic: 🚫 disabled · 🟢 active · 🔴 enabled/waiting · ⚠️ blocked --- #}
-{% set ic_force_export = '⚠️' if (battery_offline and en_force_export) else ('🚫' if not en_force_export else ('🟢' if force_export_active else '🔴')) %}
-{% set ic_force_charge = '⚠️' if (battery_offline and en_force_charge) else ('🚫' if not en_force_charge else ('🟢' if force_charge_active else '🔴')) %}
-{% set ic_block_ss     = '⚠️' if (battery_offline and en_block_ss)     else ('🚫' if not en_block_ss     else ('🟢' if ss_blocked          else '🔴')) %}
-{% set ic_neg_notify   = '🚫' if not en_neg_notify   else '🟢' %}
-
-**💲 Amber**
-&nbsp;&nbsp;Buy **{{ (buy_price * 100) | round(0) | int }}c** &nbsp;&nbsp; Sell **{{ sell_display }}c** &nbsp;&nbsp; SOC **{{ '⚠️' if battery_offline else (soc | round(0) | int ~ '%') }}**
-{{ '&nbsp;&nbsp;⚠️ **Amber Battery Connection Offline**' if battery_offline else '' }}
-&nbsp;&nbsp;Import **${{ '%.2f' | format(import_cost / 100) }}** &nbsp;&nbsp; Export **${{ '%.2f' | format((export_earnings / 100) | abs) }}** &nbsp;&nbsp; {{ '💰 Credit **$' ~ '%.2f' | format(total_earnings / 100) ~ '**' if total_earnings > 0 else '💸 Expense **$' ~ '%.2f' | format((total_earnings / 100) | abs) ~ '**' if total_earnings < 0 else '**$0.00**' }}
-&nbsp;&nbsp;Last checked **{{ states('input_datetime.amber_last_polled') | as_timestamp | timestamp_custom('%I:%M %p') }}**
-
-**🤖 Automations**
-&nbsp;&nbsp;{{ ic_force_export }} **Export** >= {{ (min_sell_price * 100) | round(0) | int }}c · Min SOC {{ min_soc_to_sell | round(0) | int }}% · {{ fit_start }}–{{ fit_end }}
-&nbsp;&nbsp;{{ ic_force_charge }} **Charge** <= {{ (max_buy_price * 100) | round(0) | int }}c · Max SOC {{ max_soc_charge | int }}% · {{ fc_start }}–{{ fc_end }}
-&nbsp;&nbsp;{{ ic_block_ss }} **Block Smart Shift** - {{ ss_block_start }}–{{ ss_block_end }}{{ ' · Active' if ss_blocked else '' }}
-&nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify**
-```
+1. Go to your dashboard → click **⋮** → **Edit dashboard**
+2. Click **+ Add Card** → search for and select **Markdown**
+3. Copy the card template from [`custom_components/amber_integration/dashboard_card.txt`](custom_components/amber_integration/dashboard_card.txt) and paste into the Content field
+4. Click **Save**
 
 ---
 
-#### Optional — Add Entity Controls to the Dashboard
+#### Configuring the Amber Integration Using the Dashboard Card
 
 Add toggle and number controls directly to your dashboard so you can control automations and adjust settings without navigating to Helpers. The automations in **Settings → Automations** should always remain enabled — control is via the **Enable Automation** toggles below. When OFF, the automation runs but exits immediately without doing anything.
 
 For each group below, add an **Entities** card and include the listed entities.
 
 > **Tip:** You can adjust the width of entity cards in edit mode — click the card → drag the resize handle, or use **Layout** options to set columns.
-
----
 
 **Price Poller**
 - `Amber Price Poller` — polls every 5 minutes and 30 seconds to get actual pricing rather than an estimate
