@@ -294,25 +294,13 @@ if [ -n "$HA_TOKEN" ] && [ "$MODE" = "full" ]; then
     echo ""
     echo "📊 Dashboard Card"
     echo ""
-    echo "   Would you like to automatically add the Amber dashboard card"
-    echo "   to your default Overview dashboard?"
+    echo "   Recent HA versions only support Entities cards on the Overview dashboard."
+    echo "   This will create a new dashboard called 'Amber' and add the card to it."
     echo ""
-    read -r -p "   Add dashboard card now? (Y/n): " add_card
+    read -r -p "   Create dashboard and add card now? (Y/n): " add_card
     if [[ ! "$add_card" =~ ^[Nn]$ ]]; then
         CARD_FILE="$SRC/dashboard_card.txt"
         if [ -f "$CARD_FILE" ]; then
-            CARD_CONTENT=$(cat "$CARD_FILE")
-            # Escape for JSON
-            CARD_JSON=$(python3 -c "
-import json, sys
-content = open('$CARD_FILE').read()
-card = {'type': 'markdown', 'content': content}
-print(json.dumps(card))
-")
-            # Get current lovelace config
-            LOVELACE=$(curl -s "$HA_URL/api/lovelace/config"                 -H "Authorization: Bearer $HA_TOKEN")
-
-            # Add card via Python to handle JSON safely
             result=$(python3 << PYEOF
 import json, urllib.request, ssl
 
@@ -321,57 +309,54 @@ ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
 try:
-    # Get current config
+    with open("$CARD_FILE") as f:
+        raw = f.read()
+    # Strip comment lines from top of file
+    lines = [l for l in raw.split("\n") if not l.startswith("#")]
+    card_content = "\n".join(lines).strip()
+
+    new_dashboard = {
+        "title": "Amber",
+        "views": [{
+            "title": "Amber",
+            "cards": [{"type": "markdown", "content": card_content}]
+        }]
+    }
+
+    data = json.dumps(new_dashboard).encode()
     req = urllib.request.Request(
-        "$HA_URL/api/lovelace/config",
-        headers={"Authorization": "Bearer $HA_TOKEN"}
+        "$HA_URL/api/lovelace/dashboards",
+        data=data,
+        method="POST",
+        headers={
+            "Authorization": "Bearer $HA_TOKEN",
+            "Content-Type": "application/json"
+        }
     )
     with urllib.request.urlopen(req, context=ctx) as r:
-        config = json.loads(r.read())
-
-    # Add card to first view
-    card = {"type": "markdown", "content": open("$CARD_FILE").read()}
-    if "views" in config and len(config["views"]) > 0:
-        if "cards" not in config["views"][0]:
-            config["views"][0]["cards"] = []
-        config["views"][0]["cards"].append(card)
-
-        # Save updated config
-        data = json.dumps(config).encode()
-        req2 = urllib.request.Request(
-            "$HA_URL/api/lovelace/config",
-            data=data,
-            method="POST",
-            headers={
-                "Authorization": "Bearer $HA_TOKEN",
-                "Content-Type": "application/json"
-            }
-        )
-        with urllib.request.urlopen(req2, context=ctx) as r:
-            print("success")
-    else:
-        print("no_views")
+        resp = json.loads(r.read())
+        print("success:" + str(resp.get("url_path", "amber")))
 except Exception as e:
-    print(f"error: {e}")
+    print("error:" + str(e))
 PYEOF
 )
-            if [ "$result" = "success" ]; then
-                echo "   ✅ Dashboard card added to Overview dashboard"
-                echo "   Refresh your browser to see it"
-            elif [ "$result" = "no_views" ]; then
-                echo "   ⚠️  Could not find a dashboard view to add the card to"
-                echo "   Add it manually from the Dashboard Card section in the README"
+            if [[ "$result" == success:* ]]; then
+                url_path="${result#success:}"
+                echo "   ✅ Dashboard created and card added!"
+                echo "   Open it from your HA sidebar or navigate to: /${url_path}"
+                echo "   Refresh your browser if you don't see it in the sidebar yet"
             else
-                echo "   ⚠️  Could not add card automatically: $result"
-                echo "   Add it manually from the Dashboard Card section in the README"
+                echo "   ⚠️  Could not create dashboard: ${result#error:}"
+                echo "   Add it manually — see the Dashboard Card section in the README"
             fi
         else
-            echo "   ⚠️  Card template file not found"
+            echo "   ⚠️  Card template file not found at $CARD_FILE"
         fi
     else
         echo "   Skipped — add the card manually from the Dashboard Card section in the README"
     fi
 fi
+
 echo ""
 echo "============================================="
 echo " Checking configuration.yaml"

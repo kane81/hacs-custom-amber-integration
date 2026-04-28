@@ -73,28 +73,15 @@ HACS (Home Assistant Community Store) is required to install this integration. I
 7. Search for **HACS** → follow the setup steps (requires a GitHub account)
 8. Once configured, **HACS** will appear in your left sidebar
 
-#### Step 1b — Install Required Add-ons
+#### Step 1b — Install Terminal & SSH
 
-You also need two add-ons from the **official Home Assistant Add-on Store**.
+You need the Terminal & SSH add-on to run the install script.
 
-Open: **Settings → Add-ons → Add-on Store**
-
-#### Studio Code Server — file editor
-
-Optional — useful for viewing or manually editing config files like `secrets.yaml`.
-
-1. Search for `Studio Code Server` → **Install**
-2. Go to the **Info** tab → **Start**
-3. Toggle **Show in sidebar** to on
-
-#### Terminal & SSH — command line
-
-Used to run the install script and test authentication. Required for Steps 1, 4 and 5.
-
-1. Search for `Terminal & SSH` → **Install**
-2. Go to the **Configuration** tab → click **Show unused optional configuration options** → expand **ssh** → set a username and password — **this is required or the add-on will not start**
-3. Go to the **Info** tab → **Start**
-4. Toggle **Show in sidebar** to on
+1. Go to **Settings → Add-ons → Add-on Store**
+2. Search for `Terminal & SSH` → **Install**
+3. Go to the **Configuration** tab → click **Show unused optional configuration options** → expand **ssh** → set a username and password — **this is required or the add-on will not start**
+4. Go to the **Info** tab → **Start**
+5. Toggle **Show in sidebar** to on
 
 ---
 
@@ -114,26 +101,58 @@ HACS downloads the integration into `/config/custom_components/amber_integration
 bash /config/custom_components/amber_integration/install.sh
 ```
 
-The script will:
-- Install python3, pip3 and pycognito if not already present
-- Copy all automations, scripts, packages and templates to `/config/`
-- Automatically update `configuration.yaml` with the required entries
-- Prompt you for your credentials and save them to `secrets.yaml`
-- Reload HA YAML and set default helper values
-- Can automatically add a dashboard card to your Overview dashboard — answer **Y** when prompted
-- Restart HA to apply all changes
+The script will walk you through the following steps:
 
-> **After this first run** the `amber_hacs_auto_install` automation handles all future HACS updates automatically.
+**1. Credentials**
 
-**Before running** you will need your HA Long-Lived Access Token:
-1. Click your **profile avatar** (bottom left of the HA sidebar)
-2. Scroll down to **Long-Lived Access Tokens** → **Create Token**
-3. Name it `amber_smartshift` — **copy it immediately**, it will not be shown again
+You will be prompted for your credentials — have these ready before running:
+- Your HA Long-Lived Access Token — get it from your **profile avatar** (bottom left) → **Long-Lived Access Tokens** → **Create Token** → copy it immediately
+- Your Amber Electric login email and password
 
-**Verify it completed successfully** — the output should end with:
+```
+🔑 Checking credentials in secrets.yaml...
+
+   Enter Amber Electric login email: you@example.com
+   ✅ amber_email saved to secrets.yaml
+
+   Enter Amber Electric login password: ••••••••
+   ✅ amber_password saved to secrets.yaml
+
+   Enter HA Long-Lived Access Token: eyJ...
+   ✅ ha_long_lived_token saved to secrets.yaml
+```
+
+**2. Configuration and defaults**
+
+The script automatically updates `configuration.yaml`, reloads HA YAML and sets default helper values. No action required — just wait for it to complete.
+
+**3. Dashboard card**
+
+> ⚠️ **Note:** Recent HA versions only support Entities cards on Overview. The script creates a new dashboard called **Amber** and adds the card there instead.
+
+The script will ask:
+
+```
+📊 Dashboard Card
+
+   Recent HA versions only support Entities cards on the Overview dashboard.
+   This will create a new dashboard called 'Amber' and add the card to it.
+
+   Create dashboard and add card now? (Y/n): Y
+   ✅ Dashboard created and card added!
+   Open it from your HA sidebar or navigate to: /amber
+```
+
+Answer **n** to skip and add it manually later — see the **Dashboard Card** section.
+
+**4. Verify completion**
+
+The output should end with:
 ```
 ✅ Install complete!
 ```
+
+> **After this first run** the `amber_hacs_auto_install` automation handles all future HACS updates automatically — you will never need to run the script manually again.
 
 ---
 
@@ -177,7 +196,7 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 
 ### Manually Adding the card
 
-> **Note:** Recent versions of Home Assistant no longer allow Markdown cards on the default Overview dashboard. You need to create a new dashboard first: **Settings → Dashboards → Add Dashboard → New dashboard from scratch**.
+> **Note:** Recent versions of Home Assistant only allow Entities cards on the default Overview dashboard — Markdown cards require a custom dashboard. Create one first: **Settings → Dashboards → Add Dashboard → New dashboard from scratch**.
 
 The install script automatically adds the card to your Overview dashboard — answer **Y** when prompted. To add it manually or to a different dashboard:
 
