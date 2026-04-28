@@ -94,9 +94,39 @@ for f in "${DEPRECATED[@]}"; do
     fi
 done
 
-# Load HA credentials — needed for all API calls below
+# Prompt for credentials and load HA credentials
 # -----------------------------------------------------------------------------
 SECRETS=/config/secrets.yaml
+touch $SECRETS
+
+prompt_if_missing() {
+    local key=$1
+    local label=$2
+    if ! grep -q "^${key}:" $SECRETS; then
+        echo ""
+        echo -n "   Enter $label: "
+        read -r value
+        if [ -n "$value" ]; then
+            echo "${key}: "${value}"" >> $SECRETS
+            echo "   ✅ ${key} saved to secrets.yaml"
+        else
+            echo "   ⚠️  Skipped — add ${key} to secrets.yaml manually later"
+        fi
+    else
+        echo "   ⏭️  ${key} already set — skipping"
+    fi
+}
+
+echo ""
+echo "🔑 Checking credentials in secrets.yaml..."
+prompt_if_missing "amber_email"         "Amber Electric login email"
+prompt_if_missing "amber_password"      "Amber Electric login password"
+prompt_if_missing "ha_long_lived_token" "HA Long-Lived Access Token (Profile → Long-Lived Access Tokens → Create Token)"
+if ! grep -q "^ha_url:" $SECRETS; then
+    echo "ha_url: "http://localhost:8123"" >> $SECRETS
+    echo "   ✅ ha_url set to http://localhost:8123 (default)"
+fi
+
 HA_URL=$(grep "^ha_url:" $SECRETS 2>/dev/null | sed 's/ha_url: *//' | tr -d '"' || echo "http://localhost:8123")
 HA_TOKEN=$(grep "^ha_long_lived_token:" $SECRETS 2>/dev/null | sed 's/ha_long_lived_token: *//' | tr -d '"')
 
@@ -222,6 +252,16 @@ set_boolean_on_if_new "input_boolean.amber_enable_force_export_notify"
 # Skipped on startup sync to avoid overwriting user values during HA boot
 # -----------------------------------------------------------------------------
 if [ "$MODE" = "full" ]; then
+    # Reload HA YAML config so helpers are created before we try to set defaults
+    if [ -n "$HA_TOKEN" ]; then
+        echo ""
+        echo "🔄 Reloading HA YAML config so helpers are available..."
+        curl -s -o /dev/null -X POST             "$HA_URL/api/services/homeassistant/reload_all"             -H "Authorization: Bearer $HA_TOKEN"             -H "Content-Type: application/json"
+        echo "   Waiting 10 seconds for helpers to initialise..."
+        sleep 10
+        echo "   ✅ Done"
+    fi
+
 echo ""
 echo "🔧 Setting default values for configurable helpers..."
 set_number_if_default   "input_number.amber_min_sell_price"                  0.15     "Min Sell Price"
@@ -246,6 +286,92 @@ hide_entity "input_boolean.amber_block_smart_shift_active"
 hide_entity "input_boolean.amber_force_export_active"
 hide_entity "input_boolean.amber_battery_offline"
 
+
+# -----------------------------------------------------------------------------
+# Offer to install the dashboard card automatically
+# -----------------------------------------------------------------------------
+if [ -n "$HA_TOKEN" ] && [ "$MODE" = "full" ]; then
+    echo ""
+    echo "📊 Dashboard Card"
+    echo ""
+    echo "   Would you like to automatically add the Amber dashboard card"
+    echo "   to your default Overview dashboard?"
+    echo ""
+    read -r -p "   Add dashboard card now? (Y/n): " add_card
+    if [[ ! "$add_card" =~ ^[Nn]$ ]]; then
+        CARD_FILE="$SRC/dashboard_card.txt"
+        if [ -f "$CARD_FILE" ]; then
+            CARD_CONTENT=$(cat "$CARD_FILE")
+            # Escape for JSON
+            CARD_JSON=$(python3 -c "
+import json, sys
+content = open('$CARD_FILE').read()
+card = {'type': 'markdown', 'content': content}
+print(json.dumps(card))
+")
+            # Get current lovelace config
+            LOVELACE=$(curl -s "$HA_URL/api/lovelace/config"                 -H "Authorization: Bearer $HA_TOKEN")
+
+            # Add card via Python to handle JSON safely
+            result=$(python3 << PYEOF
+import json, urllib.request, ssl
+
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+try:
+    # Get current config
+    req = urllib.request.Request(
+        "$HA_URL/api/lovelace/config",
+        headers={"Authorization": "Bearer $HA_TOKEN"}
+    )
+    with urllib.request.urlopen(req, context=ctx) as r:
+        config = json.loads(r.read())
+
+    # Add card to first view
+    card = {"type": "markdown", "content": open("$CARD_FILE").read()}
+    if "views" in config and len(config["views"]) > 0:
+        if "cards" not in config["views"][0]:
+            config["views"][0]["cards"] = []
+        config["views"][0]["cards"].append(card)
+
+        # Save updated config
+        data = json.dumps(config).encode()
+        req2 = urllib.request.Request(
+            "$HA_URL/api/lovelace/config",
+            data=data,
+            method="POST",
+            headers={
+                "Authorization": "Bearer $HA_TOKEN",
+                "Content-Type": "application/json"
+            }
+        )
+        with urllib.request.urlopen(req2, context=ctx) as r:
+            print("success")
+    else:
+        print("no_views")
+except Exception as e:
+    print(f"error: {e}")
+PYEOF
+)
+            if [ "$result" = "success" ]; then
+                echo "   ✅ Dashboard card added to Overview dashboard"
+                echo "   Refresh your browser to see it"
+            elif [ "$result" = "no_views" ]; then
+                echo "   ⚠️  Could not find a dashboard view to add the card to"
+                echo "   Add it manually from the Dashboard Card section in the README"
+            else
+                echo "   ⚠️  Could not add card automatically: $result"
+                echo "   Add it manually from the Dashboard Card section in the README"
+            fi
+        else
+            echo "   ⚠️  Card template file not found"
+        fi
+    else
+        echo "   Skipped — add the card manually from the Dashboard Card section in the README"
+    fi
+fi
 echo ""
 echo "============================================="
 echo " Checking configuration.yaml"
@@ -255,25 +381,37 @@ echo ""
 if grep -q "include_dir_merge_list automations" $CONFIG; then
     echo "✅ automation: !include_dir_merge_list automations/ — found"
 else
-    echo "⚠️  MISSING — automation directory not configured!"
-    echo ""
-    echo "   Add this line to $CONFIG:"
-    echo "   automation: !include_dir_merge_list automations/"
-    echo ""
-    echo "   If you already have 'automation: !include automations.yaml'"
-    echo "   replace that line with the one above."
-    ERRORS=$((ERRORS + 1))
+    # Check if old single-file format exists and replace it
+    if grep -q "automation: !include automations.yaml" $CONFIG; then
+        sed -i "s|automation: !include automations.yaml|automation: !include_dir_merge_list automations/|g" $CONFIG
+        echo "✅ automation: updated from !include to !include_dir_merge_list automations/"
+    elif grep -q "^automation:" $CONFIG; then
+        # automation: key exists but with different value - replace line
+        sed -i "s|^automation:.*|automation: !include_dir_merge_list automations/|g" $CONFIG
+        echo "✅ automation: updated to !include_dir_merge_list automations/"
+    else
+        # Not present at all - append to end of file
+        echo "" >> $CONFIG
+        echo "automation: !include_dir_merge_list automations/" >> $CONFIG
+        echo "✅ automation: !include_dir_merge_list automations/ — added to configuration.yaml"
+    fi
 fi
 
 if grep -q "include_dir_named packages" $CONFIG; then
     echo "✅ packages: !include_dir_named packages/ — found"
 else
-    echo "⚠️  MISSING — packages directory not configured!"
-    echo ""
-    echo "   Add these lines to $CONFIG under homeassistant::"
-    echo "   homeassistant:"
-    echo "     packages: !include_dir_named packages/"
-    ERRORS=$((ERRORS + 1))
+    # Check if homeassistant: block exists
+    if grep -q "^homeassistant:" $CONFIG; then
+        # Insert packages line after homeassistant:
+        sed -i "/^homeassistant:/a\  packages: !include_dir_named packages/" $CONFIG
+        echo "✅ packages: !include_dir_named packages/ — added under homeassistant:"
+    else
+        # Add full homeassistant block
+        echo "" >> $CONFIG
+        echo "homeassistant:" >> $CONFIG
+        echo "  packages: !include_dir_named packages/" >> $CONFIG
+        echo "✅ homeassistant: packages: !include_dir_named packages/ — added to configuration.yaml"
+    fi
 fi
 
 echo ""

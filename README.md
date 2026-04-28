@@ -81,7 +81,7 @@ Open: **Settings → Add-ons → Add-on Store**
 
 #### Studio Code Server — file editor
 
-Used to edit `configuration.yaml` and `secrets.yaml` directly in your browser. Required for Steps 2 and 3.
+Used to edit `secrets.yaml` directly in your browser. Required for Step 4.
 
 1. Search for `Studio Code Server` → **Install**
 2. Go to the **Info** tab → **Start**
@@ -131,58 +131,38 @@ If you see any ⚠️ warnings about missing `configuration.yaml` lines, follow 
 
 ---
 
-### Step 3 — Update configuration.yaml
+### Step 3 — Restart HA
 
-Open **Studio Code Server** from the sidebar. In the file explorer on the left open `/config/configuration.yaml`.
+The install script automatically updates `configuration.yaml` with the required entries — no manual editing needed. Just restart HA to apply the changes:
 
-Make sure these two lines are present — add any that are missing:
+**Settings → System → Restart**
 
-**1. Load automations from the automations folder:**
-```yaml
-automation: !include_dir_merge_list automations/
-```
-
-> If you already have `automation: !include automations.yaml` replace that line with the one above.
-
-**2. Load the integration package (helpers, shell commands, notify):**
-```yaml
-homeassistant:
-  packages: !include_dir_named packages/
-```
-
-> If you already have a `homeassistant:` section, add just the `packages:` line underneath it.
-
-Save with **Ctrl+S**.
+> If anything was missed the script will have printed a warning in the terminal output. You can re-run it at any time:
+> ```bash
+> bash /config/custom_components/amber_integration/install.sh
+> ```
 
 ---
 
 ### Step 4 — Add Credentials
 
-#### Step 4a — Get your HA Long-Lived Access Token
+The install script will prompt you for your credentials when it runs — no manual file editing needed.
 
-The integration needs a token to communicate with Home Assistant's API.
+You will be asked for:
+- **Amber Electric email** — the email you use to log into the Amber app
+- **Amber Electric password** — the password you use to log into the Amber app
+- **HA Long-Lived Access Token** — get this from your HA profile:
+  1. Click your **profile avatar** (bottom left of the HA sidebar)
+  2. Scroll down to **Long-Lived Access Tokens** → **Create Token**
+  3. Name it `amber_smartshift` — **copy it immediately**, it will not be shown again
 
-1. Click your **profile avatar** (bottom left of the HA sidebar)
-2. Scroll down to **Long-Lived Access Tokens**
-3. Click **Create Token**
-4. Name it `amber_smartshift` and click **OK**
-5. **Copy the token immediately** — it will not be shown again
+All values are saved directly to `/config/secrets.yaml`. If you skipped any prompts you can add them manually to that file later.
 
-#### Step 4b — Add credentials to secrets.yaml
-
-In **Studio Code Server**, open `/config/secrets.yaml` and add:
-
-```yaml
-amber_email: "your-email-you-use-to-login-to-the-amber-app"
-amber_password: "your-password-you-use-to-login-to-the-amber-app"
-ha_long_lived_token: "your-long-lived-access-token"
-
-# Optional — only needed if adding email notifications
-smtp_username: "your@gmail.com"
-smtp_password: "your-app-password"
-```
-
-Save with **Ctrl+S**.
+> **Optional** — to add email notifications, also add to `secrets.yaml`:
+> ```yaml
+> smtp_username: "your@gmail.com"
+> smtp_password: "your-app-password"
+> ```
 
 
 Restart HA: **Settings → System → Restart**
@@ -229,13 +209,16 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 
 ### Adding the card
 
+The install script automatically adds the dashboard card to your Overview dashboard — just answer **Y** when prompted during install.
+
+If you prefer to add it manually or want to add it to a different dashboard:
+
 1. Go to **Overview** in the HA sidebar
 2. Click the **⋮** menu (top right) → **Edit dashboard**
-3. If you want a dedicated dashboard: click **⋮** → **Manage dashboards** → **Add dashboard** → **New dashboard from scratch** → give it a name → **Create** → open it from the sidebar and click **Edit**
-4. Click **+ Add Card**
-5. Search for and select **Markdown**
-6. Paste the full card template below into the Content field
-7. Click **Save**
+3. To create a dedicated dashboard: click **⋮** → **Manage dashboards** → **Add dashboard** → **New dashboard from scratch** → give it a name → **Create** → open it from the sidebar and click **Edit**
+4. Click **+ Add Card** → search for and select **Markdown**
+5. Copy the card template from [`custom_components/amber_integration/dashboard_card.txt`](custom_components/amber_integration/dashboard_card.txt) and paste into the Content field
+6. Click **Save**
 
 ```jinja
 {# --- Amber Prices --- #}
@@ -347,8 +330,6 @@ When you open an automation from **Settings → Automations** you may see a warn
 
 ## Testing the Integration
 
-📐 [Click here to view the Architecture Diagram](images/architecture.png)
-
 Optional — the following steps can be used to verify the integration is working end to end.
 
 ### Step 1 — Verify price polling is working
@@ -393,6 +374,16 @@ python3 /config/scripts/amber_auth.py                  # manually refresh auth t
 ```
 
 ---
+
+## Uninstalling
+
+Removing this integration via HACS only deletes the `custom_components` folder — automation files, packages, scripts and helpers are left behind. To fully remove everything run the uninstall script first:
+
+```bash
+bash /config/custom_components/amber_integration/uninstall.sh
+```
+
+Then remove from HACS and restart HA.
 
 ## Troubleshooting
 
