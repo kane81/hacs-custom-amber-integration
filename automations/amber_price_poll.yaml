@@ -69,7 +69,7 @@
         - condition: trigger
           id: startup
       then:
-        - delay: "00:01:00"  # Wait for HA to fully load packages and auth to complete
+        - delay: "00:02:00"  # Wait for HA to fully load packages and auth to complete
     - service: shell_command.amber_live_poll
       response_variable: poll_result
     - if:

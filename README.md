@@ -25,6 +25,18 @@
 - **Home Assistant OS or Supervised** with HACS installed
 - Basic familiarity with Home Assistant
 
+### Have on hand before starting
+
+Have these ready to copy and paste during the install:
+
+| What | Where to get it |
+|---|---|
+| **Amber login email** | Your Amber Electric account email |
+| **Amber password** | Your Amber Electric account password |
+| **HA Long-Lived Access Token** | In HA: click your **Profile avatar** (bottom left) → **Long-Lived Access Tokens** → **Create Token** → give it a name → copy the token |
+| **Email address** *(optional)* | Your email address for notifications |
+| **SMTP password** *(optional)* | For Gmail: [create an App Password](https://myaccount.google.com/apppasswords) (requires 2FA enabled). For other providers check your email settings. |
+
 ---
 
 ## ⚠️ Disclaimer

@@ -310,8 +310,18 @@ LOVELACE_SRC="$SRC/lovelace/amber.yaml"
 mkdir -p "$DASHBOARD_DIR"
 
 if [ -f "$DASHBOARD_FILE" ]; then
-    echo "   ⏭️  Dashboard already exists — skipping"
-    echo "   (Delete $DASHBOARD_FILE and re-run to recreate)"
+    echo "   ℹ️  Amber dashboard already exists."
+    read -r -p "   Overwrite with default? This resets any customisations. (y/N): " overwrite_dash
+    if [[ "$overwrite_dash" =~ ^[Yy]$ ]]; then
+        if [ -f "$LOVELACE_SRC" ]; then
+            cp "$LOVELACE_SRC" "$DASHBOARD_FILE"
+            echo "   ✅ Dashboard overwritten: $DASHBOARD_FILE"
+        else
+            echo "   ⚠️  Dashboard template not found: $LOVELACE_SRC"
+        fi
+    else
+        echo "   ⏭️  Keeping existing dashboard"
+    fi
 else
     read -r -p "   Create Amber dashboard in sidebar? (Y/n): " create_dash
     if [[ ! "$create_dash" =~ ^[Nn]$ ]]; then
@@ -421,18 +431,8 @@ echo "============================================="
 echo ""
 
 if [ "$MODE" = "full" ]; then
-    read -r -p "🔄 Restart Home Assistant now to apply all changes? (Y/n): " do_restart
-    if [[ ! "$do_restart" =~ ^[Nn]$ ]]; then
-        echo ""
-        echo "   Restarting Home Assistant..."
-        curl -s -o /dev/null -X POST \
-            "$HA_URL/api/services/homeassistant/restart" \
-            -H "Authorization: Bearer $HA_TOKEN" \
-            -H "Content-Type: application/json"
-        echo "   ✅ Restart initiated — HA will be back in about 30 seconds."
-    else
-        echo ""
-        echo "   Remember to restart HA manually:"
-        echo "   Settings → System → Restart"
-    fi
+    echo ""
+    echo "🔄 Restart Required"
+    echo "   Go to Settings → System → Restart to apply all changes."
+    echo "   After restart the Amber prices will start polling automatically."
 fi
