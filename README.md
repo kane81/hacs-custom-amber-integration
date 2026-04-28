@@ -64,7 +64,7 @@ All optional automations are **off by default** — enable them individually via
 
 HACS (Home Assistant Community Store) is required to install this integration. If it is already in your sidebar, skip ahead to Step 0b.
 
-1. Go to **Settings → Add-ons → Add-on Store**
+1. Go to **Settings → Apps → Install Apps**
 2. Click **⋮** (top right) → **Custom repositories**
 3. Paste: `https://github.com/hacs/addons` → Category: **Add-on** → **Add**
 4. Search for **HACS** → **Install**
@@ -73,15 +73,14 @@ HACS (Home Assistant Community Store) is required to install this integration. I
 7. Search for **HACS** → follow the setup steps (requires a GitHub account)
 8. Once configured, **HACS** will appear in your left sidebar
 
-#### Step 1b — Install Terminal & SSH
+#### Step 1b — Install Advanced SSH & Web Terminal
 
-You need the Terminal & SSH add-on to run the install script.
+You need the Advanced SSH & Web Terminal add-on to run the install script.
 
-1. Go to **Settings → Add-ons → Add-on Store**
-2. Search for `Terminal & SSH` → **Install**
-3. Go to the **Configuration** tab → click **Show unused optional configuration options** → expand **ssh** → set a username and password — **this is required or the add-on will not start**
-4. Go to the **Info** tab → **Start**
-5. Toggle **Show in sidebar** to on
+1. Go to **Settings → Apps → Install Apps**
+2. Search for `Advanced SSH & Web Terminal` → **Install**
+3. Go to the **Info** tab → **Start**
+4. Toggle **Show in sidebar** to on
 
 ---
 
@@ -95,7 +94,7 @@ You need the Terminal & SSH add-on to run the install script.
 
 HACS downloads the integration into `/config/custom_components/amber_integration/`.
 
-**Open Terminal & SSH and run the install script:**
+**Open Advanced SSH & Web Terminal and run the install script:**
 
 ```bash
 bash /config/custom_components/amber_integration/install.sh
@@ -140,22 +139,7 @@ The script automatically updates `configuration.yaml`, reloads HA YAML and sets 
 
 **3. Dashboard card**
 
-> ⚠️ **Note:** Recent HA versions only support Entities cards on Overview. The script creates a new dashboard called **Amber** and adds the card there instead.
-
-The script will ask:
-
-```
-📊 Dashboard Card
-
-   Recent HA versions only support Entities cards on the Overview dashboard.
-   This will create a new dashboard called 'Amber' and add the card to it.
-
-   Create dashboard and add card now? (Y/n): Y
-   ✅ Dashboard created and card added!
-   Open it from your HA sidebar or navigate to: /amber
-```
-
-Answer **n** to skip and add it manually later — see the **Dashboard Card** section.
+The script automatically creates `lovelace/amber.yaml` with the dashboard card pre-configured, and adds the lovelace dashboard entry to `configuration.yaml`. After restarting HA, an **Amber** dashboard will appear in your sidebar ready to use.
 
 **4. Verify completion**
 
@@ -315,7 +299,7 @@ If both steps work your credentials and API connection are good and it is safe t
 
 ## Manual Commands
 
-These can be run from Terminal & SSH at any time:
+These can be run from Advanced SSH & Web Terminal at any time:
 
 ```bash
 python3 /config/scripts/amber_graphql.py status        # battery status and active overrides

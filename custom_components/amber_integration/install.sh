@@ -272,20 +272,6 @@ set_boolean_off_if_new() {
     fi
 }
 
-hide_entity() {
-    local entity_id=$1
-    [ -z "$HA_TOKEN" ] && echo "   - $entity_id (skipped — no token)" && return
-    result=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH \
-        "$HA_URL/api/config/entity_registry/$entity_id" \
-        -H "Authorization: Bearer $HA_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{"hidden_by": "user"}')
-    if [ "$result" = "200" ]; then
-        echo "   ✅ Hidden: $entity_id"
-    else
-        echo "   ⚠️  Could not hide $entity_id (HTTP $result)"
-    fi
-}
 
 # -----------------------------------------------------------------------------
 # Set automation enable booleans to OFF (first install only)
@@ -345,88 +331,34 @@ set_datetime_if_default "input_datetime.amber_force_charge_end"              "13
 
 fi  # end MODE=full
 
+
+
 # -----------------------------------------------------------------------------
-# Hide internal state flag helpers from the HA UI
+
+# -----------------------------------------------------------------------------
+# Create Amber dashboard
 # -----------------------------------------------------------------------------
 echo ""
-echo "🙈 Hiding internal state flag helpers..."
-hide_entity "input_boolean.amber_block_smart_shift_active"
-hide_entity "input_boolean.amber_force_export_active"
-hide_entity "input_boolean.amber_battery_offline"
+echo "📊 Creating Amber dashboard..."
 
+DASHBOARD_DIR="/config/lovelace"
+DASHBOARD_FILE="$DASHBOARD_DIR/amber.yaml"
+LOVELACE_SRC="$SRC/lovelace/amber.yaml"
 
-# -----------------------------------------------------------------------------
-# Offer to install the dashboard card automatically
-# -----------------------------------------------------------------------------
-if [ -n "$HA_TOKEN" ] && [ "$MODE" = "full" ]; then
-    echo ""
-    echo "📊 Dashboard Card"
-    echo ""
-    echo "   Recent HA versions only support Entities cards on the Overview dashboard."
-    echo "   This will create a new dashboard called 'Amber' and add the card to it."
-    echo ""
-    read -r -p "   Create dashboard and add card now? (Y/n): " add_card
-    if [[ ! "$add_card" =~ ^[Nn]$ ]]; then
-        CARD_FILE="$SRC/dashboard_card.txt"
-        if [ -f "$CARD_FILE" ]; then
-            result=$(python3 << PYEOF
-import json, urllib.request, ssl
+mkdir -p "$DASHBOARD_DIR"
 
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
-
-try:
-    with open("$CARD_FILE") as f:
-        raw = f.read()
-    # Strip comment lines from top of file
-    lines = [l for l in raw.split("\n") if not l.startswith("#")]
-    card_content = "\n".join(lines).strip()
-
-    new_dashboard = {
-        "title": "Amber",
-        "views": [{
-            "title": "Amber",
-            "cards": [{"type": "markdown", "content": card_content}]
-        }]
-    }
-
-    data = json.dumps(new_dashboard).encode()
-    req = urllib.request.Request(
-        "$HA_URL/api/lovelace/dashboards",
-        data=data,
-        method="POST",
-        headers={
-            "Authorization": "Bearer $HA_TOKEN",
-            "Content-Type": "application/json"
-        }
-    )
-    with urllib.request.urlopen(req, context=ctx) as r:
-        resp = json.loads(r.read())
-        print("success:" + str(resp.get("url_path", "amber")))
-except Exception as e:
-    print("error:" + str(e))
-PYEOF
-)
-            if [[ "$result" == success:* ]]; then
-                url_path="${result#success:}"
-                echo "   ✅ Dashboard created and card added!"
-                echo "   Open it from your HA sidebar or navigate to: /${url_path}"
-                echo "   Refresh your browser if you don't see it in the sidebar yet"
-            else
-                echo "   ⚠️  Could not create dashboard: ${result#error:}"
-                echo "   Add it manually — see the Dashboard Card section in the README"
-            fi
-        else
-            echo "   ⚠️  Card template file not found at $CARD_FILE"
-        fi
-    else
-        echo "   Skipped — add the card manually from the Dashboard Card section in the README"
-    fi
+if [ -f "$DASHBOARD_FILE" ]; then
+    echo "   ⏭️  Dashboard already exists — skipping"
+elif [ -f "$LOVELACE_SRC" ]; then
+    cp "$LOVELACE_SRC" "$DASHBOARD_FILE"
+    echo "   ✅ Created dashboard: $DASHBOARD_FILE"
+    echo "   ✅ Dashboard created. Restart HA and the Amber dashboard will appear in the sidebar."
+else
+    echo "   ⚠️  Dashboard template not found: $LOVELACE_SRC"
 fi
 
 echo ""
-echo "============================================="
+echo "="
 echo " Checking configuration.yaml"
 echo "============================================="
 echo ""
