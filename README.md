@@ -196,24 +196,28 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 
 ### Manually Adding the card
 
-> **Note:** Recent versions of Home Assistant only allow Entities cards on the default Overview dashboard — Markdown cards require a custom dashboard. Create one first: **Settings → Dashboards → Add Dashboard → New dashboard from scratch**.
+> **Note:** Recent HA versions only support Entities cards on Overview — Markdown cards require a custom dashboard. Create one first: **Settings → Dashboards → Add Dashboard → New dashboard from scratch**.
 
-The install script automatically adds the card to your Overview dashboard — answer **Y** when prompted. To add it manually or to a different dashboard:
+The install script creates a new **Amber** dashboard and adds the card automatically — answer **Y** when prompted. To add it manually or to a different dashboard:
 
 1. Go to your dashboard → click **⋮** → **Edit dashboard**
 2. Click **+ Add Card** → search for and select **Markdown**
 3. Copy the card template from [`custom_components/amber_integration/dashboard_card.txt`](custom_components/amber_integration/dashboard_card.txt) and paste into the Content field
 4. Click **Save**
 
----
+To add automation toggles and config controls to the same dashboard, add an **Entities** card for each group in the **Configuring the Amber Integration Using the Dashboard Card** section below.
 
-#### Configuring the Amber Integration Using the Dashboard Card
-
-Add toggle and number controls directly to your dashboard so you can control automations and adjust settings without navigating to Helpers. The automations in **Settings → Automations** should always remain enabled — control is via the **Enable Automation** toggles below. When OFF, the automation runs but exits immediately without doing anything.
+Add toggle and number controls directly to your dashboard so you can control automations and adjust settings without navigating to Helpers. The automations in **Settings → Automations** should always remain enabled — control is via the **Enable Automation** toggles. When OFF, the automation runs but exits immediately without doing anything.
 
 For each group below, add an **Entities** card and include the listed entities.
 
 > **Tip:** You can adjust the width of entity cards in edit mode — click the card → drag the resize handle, or use **Layout** options to set columns.
+
+---
+
+#### Configuring the Amber Integration Using the Dashboard Card
+
+Below explains the automations and configuration options of the Custom Amber Integration.
 
 **Price Poller**
 - `Amber Price Poller` — polls every 5 minutes and 30 seconds to get actual pricing rather than an estimate
