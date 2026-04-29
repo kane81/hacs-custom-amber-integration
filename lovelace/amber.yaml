@@ -62,6 +62,18 @@ views:
               &nbsp;&nbsp;{{ ic_neg_notify }} **Negative Price Notify**
 
           - type: tile
+            entity: automation.amber_price_poller
+            name: Poll Amber Prices Now
+            icon: mdi:refresh
+            tap_action:
+              action: perform-action
+              perform_action: automation.trigger
+              target:
+                entity_id: automation.amber_price_poller
+            grid_options:
+              columns: full
+
+          - type: tile
             entity: input_boolean.amber_enable_block_smart_shift
             grid_options:
               columns: full

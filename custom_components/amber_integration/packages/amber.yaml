@@ -316,7 +316,7 @@ notify:
   #
   # - name: amber_smtp
   #   platform: smtp
-  #   server: smtp.gmail.com
+  #   server: !secret smtp_server
   #   port: 587
   #   timeout: 15
   #   sender: !secret smtp_username

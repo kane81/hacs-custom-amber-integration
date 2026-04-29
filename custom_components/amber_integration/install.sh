@@ -144,7 +144,19 @@ if [ "$MODE" = "full" ]; then
     read -r -p "   Set up email notifications now? (y/N): " setup_email
     if [[ "$setup_email" =~ ^[Yy]$ ]]; then
         prompt_if_missing "smtp_username" "Email address (e.g. you@gmail.com)"
-        prompt_if_missing "smtp_password" "Email app password"
+        prompt_if_missing "smtp_password" "Email app password (Gmail: use an App Password — https://myaccount.google.com/apppasswords)"
+
+        echo ""
+        echo -n "   SMTP server (press Enter for smtp.gmail.com): "
+        read -r smtp_server_input
+        SMTP_SERVER=${smtp_server_input:-smtp.gmail.com}
+        if ! grep -q "^smtp_server:" $SECRETS; then
+            echo "smtp_server: "${SMTP_SERVER}"" >> $SECRETS
+            echo "   ✅ smtp_server set to $SMTP_SERVER"
+        else
+            SMTP_SERVER=$(grep "^smtp_server:" $SECRETS | sed "s/smtp_server: *//" | tr -d '"')
+            echo "   ⏭️  smtp_server already set to $SMTP_SERVER — skipping"
+        fi
 
         SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
         PKG=/config/packages/amber.yaml
@@ -169,7 +181,7 @@ content = content.replace(
     "  #   sender_name: \"Home Assistant - Amber\"",
     "  - name: amber_smtp\n"
     "    platform: smtp\n"
-    "    server: smtp.gmail.com\n"
+    "    server: !secret smtp_server\n"
     "    port: 587\n"
     "    timeout: 15\n"
     "    sender: !secret smtp_username\n"
@@ -420,6 +432,17 @@ if [ "$MODE" = "full" ]; then
 
     reload_yaml
 fi
+
+# -----------------------------------------------------------------------------
+# Run auth and test poll
+# -----------------------------------------------------------------------------
+echo ""
+echo "🔐 Running authentication..."
+python3 /config/scripts/amber_auth.py && echo "   ✅ Authentication successful" || echo "   ⚠️  Auth failed — check amber_email and amber_password in secrets.yaml"
+
+echo ""
+echo "📡 Running test price poll..."
+python3 /config/scripts/amber_graphql.py live && echo "   ✅ Poll successful — prices updated" || echo "   ⚠️  Poll failed — check your credentials and HA token"
 
 echo ""
 echo "============================================="

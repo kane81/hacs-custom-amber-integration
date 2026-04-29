@@ -35,6 +35,7 @@ Have these ready to copy and paste during the install:
 | **Amber password** | Your Amber Electric account password |
 | **HA Long-Lived Access Token** | In HA: click your **Profile avatar** (bottom left) → **Long-Lived Access Tokens** → **Create Token** → give it a name → copy the token |
 | **Email address** *(optional)* | Your email address for notifications |
+| **SMTP server** *(optional)* | e.g. `smtp.gmail.com` for Gmail, `smtp.office365.com` for Outlook. Press Enter during install to default to Gmail. |
 | **SMTP password** *(optional)* | For Gmail: [create an App Password](https://myaccount.google.com/apppasswords) (requires 2FA enabled). For other providers check your email settings. |
 
 ---
