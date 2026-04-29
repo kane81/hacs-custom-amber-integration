@@ -89,6 +89,7 @@ done
 # -----------------------------------------------------------------------------
 # Load / prompt for credentials
 # -----------------------------------------------------------------------------
+SECRETS=/config/secrets.yaml
 [ -f "$SECRETS" ] || echo "" > "$SECRETS"
 
 prompt_if_missing() {
