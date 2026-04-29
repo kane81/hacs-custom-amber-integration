@@ -176,36 +176,6 @@ The output should end with:
 
 ---
 
-### Step 3 — Test Authentication
-
-```bash
-python3 /config/scripts/amber_auth.py
-```
-
-Expected output:
-```
-Authenticating as your@email.com...
-Authentication successful
-Site ID:   01K...
-Config ID: 01K...
-Token cached successfully
-```
-
-Then test a live price poll:
-
-```bash
-python3 /config/scripts/amber_graphql.py live
-```
-
-Expected output:
-```
-Buy:    28.5c/kWh
-Sell:   5.2c/kWh
-HA updated. Last polled: 2026-04-08 10:30:00
-```
-
----
-
 ### Step 4 — Dashboard Card
 
 The dashboard card shows live Amber prices, current interval cost/earnings, and the status of all automations at a glance.
@@ -214,7 +184,20 @@ The dashboard card shows live Amber prices, current interval cost/earnings, and 
 
 **Icon legend:** 🟢 enabled & active · 🔴 enabled, waiting for conditions · 🚫 disabled · ⚠️ blocked
 
-### Manually Adding the card
+
+---
+
+## Using the Dashboard Card
+
+![Dashboard Card](images/dashboard_card.jpeg)
+
+If you opted to install the dashboard during setup, there will be an **Amber** dashboard in your sidebar. Click on it to see your controls. Click **Poll Amber Prices Now** to load the current info from Amber — data will be at default settings until the first poll runs.
+
+If you did not opt to auto install, see the manual instructions below.
+
+---
+
+### Manually Adding the Card
 
 > **Note:** Recent HA versions only support Entities cards on Overview — Markdown cards require a custom dashboard. Create one first: **Settings → Dashboards → Add Dashboard → New dashboard from scratch**.
 
@@ -233,9 +216,8 @@ For each group below, add an **Entities** card and include the listed entities.
 
 > **Tip:** You can adjust the width of entity cards in edit mode — click the card → drag the resize handle, or use **Layout** options to set columns.
 
----
 
-## Configuring the Amber Integration Using the Dashboard Card
+---
 
 Below explains the automations and configuration options of the Custom Amber Integration.
 
