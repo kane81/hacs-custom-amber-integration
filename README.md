@@ -266,35 +266,6 @@ When you open an automation from **Settings → Automations** you may see a warn
 
 
 
-## Testing the Integration
-
-Optional — the following steps can be used to verify the integration is working end to end.
-
-### Step 1 — Verify price polling is working
-
-1. Go to **Settings → Automations** and confirm **Amber Price Poller** is listed
-2. Check the dashboard card — buy and sell prices should be updating every 5 minutes
-3. If prices are 0 or stale, run manually in Terminal:
-   ```bash
-   python3 /config/scripts/amber_graphql.py live
-   ```
-
-### Step 2 — Test Smart Shift control
-
-This confirms your credentials are correct and the API can actually control your battery.
-
-1. In Terminal, disable Smart Shift:
-   ```bash
-   python3 /config/scripts/amber_graphql.py smartshift_off
-   ```
-2. Open the **Amber app** on your phone → check that Smart Shift shows as **disabled**
-3. Re-enable Smart Shift:
-   ```bash
-   python3 /config/scripts/amber_graphql.py smartshift_on
-   ```
-4. Check the Amber app again — Smart Shift should show as **enabled**
-
-If both steps work your credentials and API connection are good and it is safe to enable automations.
 
 ## Manual Commands
 
@@ -417,4 +388,4 @@ Issues and PRs welcome. Contributions should include testing against the current
 ## Credits
 
 - **[Official Amber Electric Integration](https://www.home-assistant.io/integrations/amberelectric/)** — the official HA integration this project complements
-- Thanks to **hudakh**, **chrismalec87**, **[6minchinbury](mailto:6minchinbury@gmail.com)**, **Jacob Kairl** and the rest of the beta testers for their invaluable feedback and testing.
+- Thanks to **hudakh**, **chrismalec87**, 6minchinbury, **Jacob Kairl** and the rest of the beta testers for their invaluable feedback and testing.
