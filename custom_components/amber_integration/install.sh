@@ -80,12 +80,11 @@ if [ "$MODE" = "full" ] && grep -q "^smtp_username:" $SECRETS; then
     PKG=/config/packages/amber.yaml
     SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
     if [ -f "$PKG" ] && grep -q "# - name: amber_smtp" $PKG; then
-        python3 /config/scripts/configure_smtp.py "$PKG" "$SMTP_USER"
+        python3 $SRC/scripts/configure_smtp.py "$PKG" "$SMTP_USER"
         echo "   ✅ Email notifications configured in amber.yaml"
     elif [ -f "$PKG" ]; then
         echo "   ⏭️  Email already configured in amber.yaml"
     fi
-fi
 fi
 
 # -----------------------------------------------------------------------------

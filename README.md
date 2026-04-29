@@ -54,42 +54,6 @@ When configuring the VM network adapter use **Bridged Adapter** and **Paravirtua
 
 ---
 
-## ⚠️ Prerequisites
-
-- Active **Amber Electric** subscription with Smart Shift enabled
-- **Smart Shift compatible battery** enrolled in the Amber app
-- **Home Assistant OS or Supervised** with HACS installed
-- Basic familiarity with Home Assistant
-
-### Have on hand before starting
-
-Have these ready to copy and paste during the install:
-
-| What | Where to get it |
-|---|---|
-| **Amber login email** | Your Amber Electric account email |
-| **Amber password** | Your Amber Electric account password |
-| **HA Long-Lived Access Token** | In HA: click your **Profile avatar** (bottom left) → **Long-Lived Access Tokens** → **Create Token** → give it a name → copy the token |
-| **Email address** *(optional)* | Your email address for notifications |
-| **SMTP server** *(optional)* | e.g. `smtp.gmail.com` for Gmail, `smtp.office365.com` for Outlook. Press Enter during install to default to Gmail. |
-| **SMTP password** *(optional)* | For Gmail: [create an App Password](https://myaccount.google.com/apppasswords) (requires 2FA enabled). For other providers check your email settings. |
-
----
-
-## ⚠️ Disclaimer
-
-This project uses Amber Electric's internal API which is not publicly documented or officially supported. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
-
-### New to Home Assistant?
-
-If you are new to editing Home Assistant configuration files it is strongly recommended to test in a virtual machine before making changes to your live installation.
-
-**[Setting up Home Assistant in a Virtual Machine](https://www.youtube.com/watch?v=GDlUzAsEO30)**
-
-When configuring the VM network adapter use **Bridged Adapter** and **Paravirtualized Network (virtio-net)** — without this, downloads inside the VM can hang for 20+ minutes.
-
----
-
 ## What It Does
 
 | Feature | Description |
