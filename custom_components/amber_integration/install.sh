@@ -72,22 +72,6 @@ echo "📄 Copying templates..."
 mkdir -p /config/templates
 cp -v $SRC/templates/amber.yaml /config/templates/
 
-# -----------------------------------------------------------------------------
-# Apply email notification config to package if requested
-# (done after file copy so /config/packages/amber.yaml exists)
-# -----------------------------------------------------------------------------
-if [ "$MODE" = "full" ] && grep -q "^smtp_username:" $SECRETS; then
-    PKG=/config/packages/amber.yaml
-    SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
-    if [ -f "$PKG" ] && grep -q "# - name: amber_smtp" $PKG; then
-        python3 $SRC/scripts/configure_smtp.py "$PKG" "$SMTP_USER"
-        echo "   ✅ Email notifications configured in amber.yaml"
-    elif [ -f "$PKG" ]; then
-        echo "   ⏭️  Email already configured in amber.yaml"
-    fi
-fi
-
-# -----------------------------------------------------------------------------
 # Remove deprecated files
 # -----------------------------------------------------------------------------
 echo ""
@@ -105,7 +89,6 @@ done
 # -----------------------------------------------------------------------------
 # Load / prompt for credentials
 # -----------------------------------------------------------------------------
-SECRETS=/config/secrets.yaml
 touch $SECRETS
 
 prompt_if_missing() {
@@ -173,6 +156,13 @@ if [ "$MODE" = "full" ]; then
             echo "   ⏭️  smtp_server already set to $SMTP_SERVER — skipping"
         fi
 
+        # Apply SMTP config to package now that secrets.yaml and packages/amber.yaml both exist
+        SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
+        PKG=/config/packages/amber.yaml
+        if [ -f "$PKG" ]; then
+            python3 $SRC/scripts/configure_smtp.py "$PKG" "$SMTP_USER"
+            echo "   ✅ Email notifications configured in amber.yaml"
+        fi
     else
         echo "   Skipped — see Email Notifications in README to configure later."
     fi

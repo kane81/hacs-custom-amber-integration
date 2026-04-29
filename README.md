@@ -18,6 +18,38 @@
 
 ---
 
+
+## Features
+
+| Feature | Description |
+|---|---|
+| **Price polling** | Fetches live Amber buy/sell prices every 5 minutes |
+| **Force Export** | Discharges battery to grid when sell price exceeds your threshold |
+| **Grid Charging** | Charges battery from grid when buy price goes negative |
+| **Block Smart Shift** | Disables Smart Shift overnight to preserve battery for next day |
+| **Price Notifications** | Alerts when buy price goes negative and when it recovers |
+| **Battery Offline Detection** | Detects when Amber cannot communicate with the battery — notifies once when offline and again when restored. Shows a warning on the dashboard card. |
+
+All optional automations are **off by default** — enable them individually via the dashboard card or Overview → Devices → Helpers once you are confident the integration is working correctly.
+
+---
+
+
+## ⚠️ Disclaimer
+
+This project uses Amber Electric's internal API which is not publicly documented or officially supported. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
+
+### New to Home Assistant?
+
+If you are new to editing Home Assistant configuration files it is strongly recommended to test in a virtual machine before making changes to your live installation.
+
+**[Setting up Home Assistant in a Virtual Machine](https://www.youtube.com/watch?v=GDlUzAsEO30)**
+
+When configuring the VM network adapter use **Bridged Adapter** and **Paravirtualized Network (virtio-net)** — without this, downloads inside the VM can hang for 20+ minutes.
+
+---
+
+
 ## ⚠️ Prerequisites
 
 - Active **Amber Electric** subscription with Smart Shift enabled
@@ -40,34 +72,6 @@ Have these ready to copy and paste during the install:
 
 ---
 
-## ⚠️ Disclaimer
-
-This project uses Amber Electric's internal API which is not publicly documented or officially supported. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
-
-### New to Home Assistant?
-
-If you are new to editing Home Assistant configuration files it is strongly recommended to test in a virtual machine before making changes to your live installation.
-
-**[Setting up Home Assistant in a Virtual Machine](https://www.youtube.com/watch?v=GDlUzAsEO30)**
-
-When configuring the VM network adapter use **Bridged Adapter** and **Paravirtualized Network (virtio-net)** — without this, downloads inside the VM can hang for 20+ minutes.
-
----
-
-## What It Does
-
-| Feature | Description |
-|---|---|
-| **Price polling** | Fetches live Amber buy/sell prices every 5 minutes |
-| **Force Export** | Discharges battery to grid when sell price exceeds your threshold |
-| **Grid Charging** | Charges battery from grid when buy price goes negative |
-| **Block Smart Shift** | Disables Smart Shift overnight to preserve battery for next day |
-| **Price Notifications** | Alerts when buy price goes negative and when it recovers |
-| **Battery Offline Detection** | Detects when Amber cannot communicate with the battery — notifies once when offline and again when restored. Shows a warning on the dashboard card. |
-
-All optional automations are **off by default** — enable them individually via the dashboard card or Overview → Devices → Helpers once you are confident the integration is working correctly.
-
----
 
 ## Installation
 
