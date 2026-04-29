@@ -73,6 +73,83 @@ mkdir -p /config/templates
 cp -v $SRC/templates/amber.yaml /config/templates/
 
 # -----------------------------------------------------------------------------
+# Apply email notification config to package if requested
+# (done after file copy so /config/packages/amber.yaml exists)
+# -----------------------------------------------------------------------------
+if [ "$MODE" = "full" ] && grep -q "^smtp_username:" $SECRETS; then
+    PKG=/config/packages/amber.yaml
+    SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
+    if [ -f "$PKG" ] && grep -q "# - name: amber_smtp" $PKG; then
+        python3 << PYEOF
+content = open("$PKG").read()
+smtp_user = "$SMTP_USER"
+content = content.replace(
+    "  # Then add "- service: amber_smtp" to the group services above.
+"
+    "  #
+"
+    "  # - name: amber_smtp
+"
+    "  #   platform: smtp
+"
+    "  #   server: !secret smtp_server
+"
+    "  #   port: 587
+"
+    "  #   timeout: 15
+"
+    "  #   sender: !secret smtp_username
+"
+    "  #   encryption: starttls
+"
+    "  #   username: !secret smtp_username
+"
+    "  #   password: !secret smtp_password
+"
+    "  #   recipient:
+"
+    "  #     - "your@email.com"    # <- your email address
+"
+    "  #   sender_name: "Home Assistant - Amber"",
+    "  - name: amber_smtp
+"
+    "    platform: smtp
+"
+    "    server: !secret smtp_server
+"
+    "    port: 587
+"
+    "    timeout: 15
+"
+    "    sender: !secret smtp_username
+"
+    "    encryption: starttls
+"
+    "    username: !secret smtp_username
+"
+    "    password: !secret smtp_password
+"
+    "    recipient:
+"
+    "      - "" + smtp_user + ""
+"
+    "    sender_name: "Home Assistant - Amber""
+)
+content = content.replace(
+    "      - service: persistent_notification",
+    "      - service: persistent_notification
+      - service: amber_smtp"
+)
+open("$PKG", "w").write(content)
+print("done")
+PYEOF
+        echo "   ✅ Email notifications configured in amber.yaml"
+    elif [ -f "$PKG" ] && grep -q "amber_smtp" $PKG; then
+        echo "   ⏭️  Email already configured in amber.yaml"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Remove deprecated files
 # -----------------------------------------------------------------------------
 echo ""
@@ -158,51 +235,6 @@ if [ "$MODE" = "full" ]; then
             echo "   ⏭️  smtp_server already set to $SMTP_SERVER — skipping"
         fi
 
-        SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
-        PKG=/config/packages/amber.yaml
-
-        if grep -q "# - name: amber_smtp" $PKG; then
-            python3 << PYEOF
-content = open("$PKG").read()
-content = content.replace(
-    "  # Then add \"- service: amber_smtp\" to the group services above.\n"
-    "  #\n"
-    "  # - name: amber_smtp\n"
-    "  #   platform: smtp\n"
-    "  #   server: smtp.gmail.com\n"
-    "  #   port: 587\n"
-    "  #   timeout: 15\n"
-    "  #   sender: !secret smtp_username\n"
-    "  #   encryption: starttls\n"
-    "  #   username: !secret smtp_username\n"
-    "  #   password: !secret smtp_password\n"
-    "  #   recipient:\n"
-    "  #     - \"your@email.com\"    # ← your email address\n"
-    "  #   sender_name: \"Home Assistant - Amber\"",
-    "  - name: amber_smtp\n"
-    "    platform: smtp\n"
-    "    server: !secret smtp_server\n"
-    "    port: 587\n"
-    "    timeout: 15\n"
-    "    sender: !secret smtp_username\n"
-    "    encryption: starttls\n"
-    "    username: !secret smtp_username\n"
-    "    password: !secret smtp_password\n"
-    "    recipient:\n"
-    "      - \"$SMTP_USER\"\n"
-    "    sender_name: \"Home Assistant - Amber\""
-)
-content = content.replace(
-    "      - service: persistent_notification",
-    "      - service: persistent_notification\n      - service: amber_smtp"
-)
-open("$PKG", "w").write(content)
-print("done")
-PYEOF
-            echo "   ✅ Email configured in amber.yaml"
-        else
-            echo "   ⏭️  Email already configured in amber.yaml"
-        fi
     else
         echo "   Skipped — see Email Notifications in README to configure later."
     fi
