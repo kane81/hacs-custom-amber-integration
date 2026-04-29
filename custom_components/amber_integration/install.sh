@@ -386,19 +386,17 @@ fi
 if grep -q "lovelace-amber" $CONFIG; then
     echo "✅ lovelace dashboard entry — found"
 elif [ -f "$DASHBOARD_FILE" ]; then
-    if grep -q "^lovelace:" $CONFIG; then
-        sed -i "/^lovelace:/a\\  dashboards:\n    lovelace-amber:\n      mode: yaml\n      title: Amber\n      icon: mdi:lightning-bolt\n      filename: lovelace/amber.yaml\n      show_in_sidebar: true" $CONFIG
-    else
-        echo "" >> $CONFIG
-        echo "lovelace:" >> $CONFIG
-        echo "  dashboards:" >> $CONFIG
-        echo "    lovelace-amber:" >> $CONFIG
-        echo "      mode: yaml" >> $CONFIG
-        echo "      title: Amber" >> $CONFIG
-        echo "      icon: mdi:lightning-bolt" >> $CONFIG
-        echo "      filename: lovelace/amber.yaml" >> $CONFIG
-        echo "      show_in_sidebar: true" >> $CONFIG
-    fi
+    cat >> $CONFIG << 'LOVELACE'
+
+lovelace:
+  dashboards:
+    lovelace-amber:
+      mode: yaml
+      title: Amber
+      icon: mdi:lightning-bolt
+      filename: lovelace/amber.yaml
+      show_in_sidebar: true
+LOVELACE
     echo "✅ lovelace dashboard entry — added"
 fi
 
