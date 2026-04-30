@@ -116,6 +116,8 @@ HACS downloads the integration into `/config/custom_components/amber_integration
 ```bash
 bash /config/custom_components/amber_integration/install.sh
 ```
+> 💡 **Terminal tip:** To paste into the terminal use **Right Click → Paste**. Do not use Ctrl+V — it will not work in the HA terminal.
+
 
 The script will walk you through the following steps:
 
