@@ -70,6 +70,18 @@
       entity_id: input_boolean.amber_enable_force_charge_custom_rate
       to: "off"
       id: disabled
+    - platform: state
+      entity_id: input_datetime.amber_force_charge_start
+      id: time_change
+    - platform: state
+      entity_id: input_datetime.amber_force_charge_end
+      id: time_change
+    - platform: state
+      entity_id: input_number.amber_max_buy_price_to_charge
+      id: time_change
+    - platform: state
+      entity_id: input_number.amber_max_soc_to_charge
+      id: time_change
   condition:
     - condition: state
       entity_id: input_boolean.amber_battery_offline

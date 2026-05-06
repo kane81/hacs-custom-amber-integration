@@ -111,6 +111,18 @@
       entity_id: input_boolean.amber_enable_force_export_custom_fit
       to: "off"
       id: disabled
+    - platform: state
+      entity_id: input_datetime.amber_force_sell_on_custom_fit_start
+      id: time_change
+    - platform: state
+      entity_id: input_datetime.amber_force_sell_on_custom_fit_end
+      id: time_change
+    - platform: state
+      entity_id: input_number.amber_min_sell_price
+      id: time_change
+    - platform: state
+      entity_id: input_number.amber_min_soc_to_sell
+      id: time_change
   condition:
     - condition: state
       entity_id: input_boolean.amber_battery_offline
