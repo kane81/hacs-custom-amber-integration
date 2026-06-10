@@ -229,10 +229,32 @@
                     - condition: template
                       value_template: "{{ soc >= max_soc }}"
                   sequence:
-                    - service: shell_command.amber_force_preserve
-                      data:
-                        duration: 60
-                # Price too high — cancel override and restore Smart Shift
+                    - service: shell_command.amber_cancel_override
+                    - service: input_boolean.turn_off
+                      target:
+                        entity_id: input_boolean.amber_force_charge_active
+                # ── Override may have expired (Amber 120min cap) ───────────────────
+        - conditions:
+            - condition: trigger
+              id: price_change
+            - condition: state
+              entity_id: input_boolean.amber_force_charge_active
+              state: "on"
+            - condition: template
+              value_template: >
+                {# Check if battery is NOT actually charging — Amber override may have expired #}
+                {% set battery_w = states(states('input_text.sensor_battery_io')) | float(0) %}
+                {{ battery_w >= 0 }}
+          sequence:
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_charge_active
+            - service: notify.notification
+              data:
+                title: "⚡ Amber Force Charge — Override Expired"
+                message: "Amber 120-minute charge override has expired. Battery is no longer charging via override."
+
+        # Price too high — cancel override and restore Smart Shift
                 - conditions:
                     - condition: template
                       value_template: "{{ buy_price > max_buy_price }}"

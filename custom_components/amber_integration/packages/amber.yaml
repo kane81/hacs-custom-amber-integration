@@ -38,7 +38,7 @@ shell_command:
 
   # Forces battery to preserve current charge via Amber Smart Shift API
   # Not used by automations - available for manual use via Developer Tools
-  amber_force_preserve: "python3 /config/scripts/amber_graphql.py preserve {{ duration | default(60) }}"
+  amber_force_preserve: "python3 /config/scripts/amber_graphql.py preserve-charge-charge {{ duration | default(60) }}"
 
   # Cancels any active battery override via Amber Smart Shift API
   amber_cancel_override: "python3 /config/scripts/amber_graphql.py cancel"

@@ -11,7 +11,7 @@
 #   - Ensures reliable override execution by cancelling existing overrides first
 #
 # Override Behaviour (IMPORTANT):
-#   Amber API may ignore new overrides if one is already active (e.g. preserve).
+#   Amber API may ignore new overrides if one is already active (e.g. preserve-charge).
 #   To ensure deterministic behaviour, this script:
 #
 #       1. Cancels any active override
@@ -25,7 +25,7 @@
 #   live                 - Poll live prices and metrics, update HA helpers
 #   discharge <minutes>  - Force battery discharge for X minutes (default 60)
 #   charge <minutes>     - Force battery charge for X minutes (default 60)
-#   preserve <minutes>   - Force battery preserve for X minutes (default 60)
+#   preserve-charge <minutes> - Force battery preserve-charge for X minutes (default 60)
 #   cancel               - Cancel any active battery override
 #   smartshift_on        - Enable Smart Shift optimisation
 #   smartshift_off       - Disable Smart Shift optimisation
@@ -33,7 +33,7 @@
 #
 # Flags:
 #   --enable-ss          - Auto re-enable Smart Shift if disabled before running
-#                          discharge/charge/preserve. Without this flag the script
+#                          discharge/charge/preserve-charge. Without this flag the script
 #                          exits with an error if Smart Shift is disabled.
 #
 # Examples:
@@ -62,6 +62,8 @@
 #                                  - Reads previous state to notify only on transitions
 #                                  - Notifies once when offline, once when restored
 #                                  - Added call_ha_service() helper function
+#   v1.5    2026-05-10    Kane Li  - Renamed preserve command to preserve-charge
+#                                  - Amber API requires "preserve-charge" not "preserve"
 # =============================================================================
 
 import json
@@ -431,7 +433,7 @@ def add_battery_override(id_token, site_id, config_id, override_value, duration_
         id_token (str):         Cognito IdToken
         site_id (str):          Amber site ID
         config_id (str):        Battery config ID
-        override_value (str):   One of: discharge, charge, preserve
+        override_value (str):   One of: discharge, charge, preserve-charge
         duration_minutes (int): How long to apply the override
 
     Returns:
@@ -523,7 +525,7 @@ def ensure_clean_override_state(id_token, site_id, config_id):
         1. Cancel any existing override
         2. Wait 5 seconds for backend consistency
 
-    This prevents failures when the battery is manually set to preserve
+    This prevents failures when the battery is manually set to preserve-charge
     or another override is already active.
     """
     print("Ensuring clean state: cancelling any existing override...")
@@ -665,7 +667,7 @@ def check_smartshift_enabled(id_token, site_id, config_id, auto_enable=False):
       2. amber_block_smart_shift_active = off → disabled externally (Amber app, manual)
          → Warn. If auto_enable=True, re-enable and proceed.
 
-    Smart Shift must be enabled for battery overrides (discharge, charge, preserve)
+    Smart Shift must be enabled for battery overrides (discharge, charge, preserve-charge)
     to take effect. Overrides sent while SS is disabled are silently ignored by Amber.
 
     Args:
@@ -721,13 +723,13 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         print("Usage: python3 amber_graphql.py <command> [duration_minutes]")
-        print("Commands: live, discharge, charge, preserve, cancel, smartshift_on, smartshift_off, status")
+        print("Commands: live, discharge, charge, preserve-charge, cancel, smartshift_on, smartshift_off, status")
         sys.exit(1)
 
     command  = sys.argv[1].lower()
     duration = int(sys.argv[2]) if len(sys.argv) > 2 else 60
 
-    print(f"Command: {command}" + (f" ({duration} min)" if command in ["discharge", "charge", "preserve"] else ""))
+    print(f"Command: {command}" + (f" ({duration} min)" if command in ["discharge", "charge", "preserve-charge"] else ""))
 
     # Load cached token - auto refreshes if expired
     cache     = load_token_cache()
@@ -764,12 +766,12 @@ if __name__ == "__main__":
         print(f"Valid from:  {result['validFrom']}")
         print(f"Valid to:    {result['validTo']}")
 
-    elif command == "preserve":
+    elif command == "preserve-charge":
         if not check_smartshift_enabled(id_token, site_id, config_id, auto_enable=auto_enable_ss):
             sys.exit(1)
         ensure_clean_override_state(id_token, site_id, config_id)
-        result = add_battery_override(id_token, site_id, config_id, "preserve", duration)
-        print(f"Force preserve started!")
+        result = add_battery_override(id_token, site_id, config_id, "preserve-charge", duration)
+        print(f"Force preserve-charge started!")
         print(f"Override ID: {result['overrideId']}")
         print(f"Valid from:  {result['validFrom']}")
         print(f"Valid to:    {result['validTo']}")
@@ -825,5 +827,5 @@ if __name__ == "__main__":
 
     else:
         print(f"Unknown command: {command}")
-        print("Commands: live, discharge, charge, preserve, cancel, smartshift_on, smartshift_off, status")
+        print("Commands: live, discharge, charge, preserve-charge, cancel, smartshift_on, smartshift_off, status")
         sys.exit(1)

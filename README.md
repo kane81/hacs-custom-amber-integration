@@ -1,4 +1,6 @@
-<table><tr><td><img src="brand/icon.png" width="80"/></td><td><h1>Home Assistant Custom Amber Electric Integration</h1></td></tr></table>
+<p align="center"><img src="https://raw.githubusercontent.com/kane81/hacs-custom-amber-integration/main/custom_components/amber_integration/brand/icon.png" width="80" alt="icon"/></p>
+
+# Home Assistant Custom Amber Electric Integration
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/kane81)
 
@@ -103,6 +105,11 @@ You need the Advanced SSH & Web Terminal add-on to run the install script.
 
 ### Step 2 — Install Custom Amber Project
 
+Click the button below to add the repository to HACS:
+
+[![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kane81&repository=hacs-custom-amber-integration&category=integration)
+
+Or add manually:
 1. Open **HACS** in your HA sidebar
 2. Click **⋮** (top right) → **Custom repositories**
 3. Paste: `https://github.com/kane81/hacs-custom-amber-integration`
@@ -244,7 +251,7 @@ Below explains the automations and configuration options of the Custom Amber Int
 
 ---
 
-**Force Charge** — charges battery from grid when buy price is at or below your threshold; switches to preserve mode at max SOC
+**Force Charge** — charges battery from grid when buy price is at or below your threshold; cancels override at max SOC returning to self-consumption
 - `Enable Automation: Force Charge`
 - `Amber Max Buy Price` — maximum buy price to trigger charging
 - `Amber Max SOC to Charge` — stop charging at this battery %

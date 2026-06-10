@@ -10,9 +10,10 @@
 #       "sync" just copies files — used on HA startup.
 # =============================================================================
 
-set -e
-
 MODE=${1:-full}
+
+# Exit on error in full mode only — sync mode continues on errors
+[ "$MODE" = "full" ] && set -e || true
 SRC=/config/custom_components/amber_integration
 CONFIG=/config/configuration.yaml
 ERRORS=0
@@ -64,8 +65,14 @@ cp -v $SRC/scripts/*.py /config/scripts/
 
 echo ""
 echo "📦 Copying package..."
-mkdir -p /config/packages
-cp -v $SRC/packages/amber.yaml /config/packages/
+# Detect existing packages folder name
+if [ -d "/config/package" ] && ! [ -d "/config/packages" ]; then
+    PKG_DIR=/config/package
+else
+    PKG_DIR=/config/packages
+fi
+mkdir -p "$PKG_DIR"
+cp -v $SRC/packages/amber.yaml "$PKG_DIR/"
 
 echo ""
 echo "📄 Copying templates..."
@@ -159,7 +166,7 @@ if [ "$MODE" = "full" ]; then
 
         # Apply SMTP config to package now that secrets.yaml and packages/amber.yaml both exist
         SMTP_USER=$(grep "^smtp_username:" $SECRETS 2>/dev/null | sed "s/smtp_username: *//" | tr -d '"')
-        PKG=/config/packages/amber.yaml
+        PKG=${PKG_DIR:-/config/packages}/amber.yaml
         if [ -f "$PKG" ]; then
             python3 $SRC/scripts/configure_smtp.py "$PKG" "$SMTP_USER"
             echo "   ✅ Email notifications configured in amber.yaml"
@@ -320,9 +327,17 @@ echo ""
 
 if grep -q "include_dir_merge_list automations" $CONFIG; then
     echo "✅ automation: !include_dir_merge_list automations/ — found"
-elif grep -q "automation: !include automations.yaml" $CONFIG; then
-    sed -i "s|automation: !include automations.yaml|automation: !include_dir_merge_list automations/|g" $CONFIG
-    echo "✅ automation: updated to !include_dir_merge_list automations/"
+elif [ -f "/config/automations.yaml" ]; then
+    echo "   ℹ️  Found existing automations.yaml — migrating to automations/ directory..."
+    mkdir -p /config/automations
+    cp /config/automations.yaml /config/automations/automations_existing.yaml
+    if grep -q "automation: !include automations.yaml" $CONFIG; then
+        sed -i "s|automation: !include automations.yaml|automation: !include_dir_merge_list automations/|g" $CONFIG
+    elif grep -q "^automation:" $CONFIG; then
+        sed -i "s|^automation:.*|automation: !include_dir_merge_list automations/|g" $CONFIG
+    fi
+    echo "   ✅ Existing automations backed up to automations/automations_existing.yaml"
+    echo "   ✅ automation: updated to !include_dir_merge_list automations/"
 elif grep -q "^automation:" $CONFIG; then
     sed -i "s|^automation:.*|automation: !include_dir_merge_list automations/|g" $CONFIG
     echo "✅ automation: updated to !include_dir_merge_list automations/"
@@ -332,16 +347,24 @@ else
     echo "✅ automation: !include_dir_merge_list automations/ — added"
 fi
 
-if grep -q "include_dir_named packages" $CONFIG; then
-    echo "✅ packages: !include_dir_named packages/ — found"
-elif grep -q "^homeassistant:" $CONFIG; then
-    sed -i "/^homeassistant:/a\\  packages: !include_dir_named packages/" $CONFIG
-    echo "✅ packages: !include_dir_named packages/ — added under homeassistant:"
+# Detect existing packages folder name (some users use package/ not packages/)
+if grep -q "include_dir_named packages" $CONFIG || grep -q "include_dir_named package" $CONFIG; then
+    echo "✅ packages config — found"
+elif [ -d "/config/package" ] && ! [ -d "/config/packages" ]; then
+    echo "   ℹ️  Found existing package/ folder — using that instead of packages/"
+    if grep -q "^homeassistant:" $CONFIG; then
+        sed -i "/^homeassistant:/a\\  packages: !include_dir_named package/" $CONFIG
+    else
+        printf "\nhomeassistant:\n  packages: !include_dir_named package/\n" >> $CONFIG
+    fi
+    echo "✅ packages: !include_dir_named package/ — added"
 else
-    echo "" >> $CONFIG
-    echo "homeassistant:" >> $CONFIG
-    echo "  packages: !include_dir_named packages/" >> $CONFIG
-    echo "✅ homeassistant: packages: — added"
+    if grep -q "^homeassistant:" $CONFIG; then
+        sed -i "/^homeassistant:/a\\  packages: !include_dir_named packages/" $CONFIG
+    else
+        printf "\nhomeassistant:\n  packages: !include_dir_named packages/\n" >> $CONFIG
+    fi
+    echo "✅ packages: !include_dir_named packages/ — added"
 fi
 
 if grep -q "lovelace-amber" $CONFIG; then
