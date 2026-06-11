@@ -209,34 +209,20 @@
               data:
                 duration: 60
 
-        # PRESERVE - battery full, price still good, hold charge (silent re-issue)
+        # PRESERVE - battery full, cancel override and return to self-consumption
         - conditions:
             - condition: template
               value_template: "{{ enabled and buy_price <= max_buy_price and soc >= max_soc }}"
           sequence:
-            - service: shell_command.amber_force_preserve
-              data:
-                duration: 60
+            - service: shell_command.amber_cancel_override
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.amber_force_charge_active
 
-        # STOP - conditions no longer met
+        # STOP - conditions no longer met — cancel override and clear flag
         - conditions:
             - condition: template
               value_template: "{{ enabled and active and (buy_price > max_buy_price or soc >= max_soc) }}"
-          sequence:
-            - choose:
-                # Battery full — switch to preserve mode to hold charge
-                - conditions:
-                    - condition: template
-                      value_template: "{{ soc >= max_soc }}"
-                  sequence:
-                    - service: shell_command.amber_cancel_override
-                    - service: input_boolean.turn_off
-                      target:
-                        entity_id: input_boolean.amber_force_charge_active
-        # Price too high — cancel override and restore Smart Shift
-        - conditions:
-            - condition: template
-              value_template: "{{ buy_price > max_buy_price }}"
           sequence:
             - service: shell_command.amber_cancel_override
             - service: shell_command.amber_smartshift_on
