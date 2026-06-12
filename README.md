@@ -56,7 +56,7 @@ When configuring the VM network adapter use **Bridged Adapter** and **Paravirtua
 
 - Active **Amber Electric** subscription with Smart Shift enabled
 - **Smart Shift compatible battery** enrolled in the Amber app
-- **Home Assistant OS or Supervised** with HACS installed
+- **Home Assistant OS, Supervised, or Docker** with HACS installed
 - Basic familiarity with Home Assistant
 
 ### Have on hand before starting
@@ -81,8 +81,9 @@ Have these ready to copy and paste during the install:
 
 #### Install HACS (if not already installed)
 
-HACS (Home Assistant Community Store) is required to install this integration. If it is already in your sidebar, skip ahead to Step 0b.
+HACS (Home Assistant Community Store) is required to install this integration. If it is already in your sidebar, skip ahead to Step 1b.
 
+**Home Assistant OS / Supervised:**
 1. Go to **Settings → Apps → Install Apps**
 2. Click **⋮** (top right) → **Custom repositories**
 3. Paste: `https://github.com/hacs/addons` → Category: **Add-on** → **Add**
@@ -92,14 +93,32 @@ HACS (Home Assistant Community Store) is required to install this integration. I
 7. Search for **HACS** → follow the setup steps (requires a GitHub account)
 8. Once configured, **HACS** will appear in your left sidebar
 
-#### Step 1b — Install Advanced SSH & Web Terminal
+**Docker container (no supervisor access):**
 
-You need the Advanced SSH & Web Terminal add-on to run the install script.
+First find your container name by running on the host:
+```bash
+docker ps
+```
+Look for the Home Assistant container — in this example it is called `homeassistant`.
 
+Then run:
+```bash
+docker exec -it homeassistant bash
+wget -O - https://get.hacs.xyz | bash
+```
+Then restart Home Assistant and complete the HACS setup via **Settings → Devices & Services → Add Integration → HACS**.
+
+#### Step 1b — Terminal Access
+
+You need terminal access to run the install script.
+
+**Home Assistant OS / Supervised:** Install the **Advanced SSH & Web Terminal** add-on:
 1. Go to **Settings → Apps → Install Apps**
 2. Search for `Advanced SSH & Web Terminal` → **Install**
 3. Go to the **Info** tab → **Start**
 4. Toggle **Show in sidebar** to on
+
+**Docker container:** Terminal access is not via the add-on. You will run commands directly on the host.
 
 ---
 
@@ -118,12 +137,21 @@ Or add manually:
 
 HACS downloads the integration into `/config/custom_components/amber_integration/`.
 
-**Open Advanced SSH & Web Terminal and run the install script:**
+**Run the install script:**
 
+*HA OS / Supervised* — open **Advanced SSH & Web Terminal** from the sidebar:
 ```bash
 bash /config/custom_components/amber_integration/install.sh
 ```
-> 💡 **Terminal tip:** To paste into the terminal use **Right Click → Paste**. Do not use Ctrl+V — it will not work in the HA terminal.
+> 💡 **Terminal tip:** To paste use **Right Click → Paste**. Do not use Ctrl+V — it will not work in the HA terminal.
+
+*Docker* — from a host terminal, get an interactive shell then run the script:
+```bash
+docker ps                          # find your container name e.g. homeassistant
+docker exec -it homeassistant bash
+bash /config/custom_components/amber_integration/install.sh
+```
+> 💡 In a Docker terminal you can use **Ctrl+V** to paste normally.
 
 
 The script will walk you through the following steps:
@@ -163,11 +191,11 @@ Answer **y** if you want email alerts, or press Enter to skip — you can add th
 
 The script automatically updates `configuration.yaml`, reloads HA YAML and sets default helper values. No action required — just wait for it to complete.
 
-**3. Dashboard card**
+**4. Dashboard card**
 
 The script automatically creates `lovelace/amber.yaml` with the dashboard card pre-configured, and adds the lovelace dashboard entry to `configuration.yaml`. After restarting HA, an **Amber** dashboard will appear in your sidebar ready to use.
 
-**4. Verify completion**
+**5. Verify completion**
 
 The output should end with:
 ```
@@ -182,17 +210,6 @@ The output should end with:
 > ```bash
 > bash /config/custom_components/amber_integration/install.sh
 > ```
-
----
-
-### Step 4 — Dashboard Card
-
-The dashboard card shows live Amber prices, current interval cost/earnings, and the status of all automations at a glance.
-
-![Dashboard Card](images/dashboard_card.jpeg)
-
-**Icon legend:** 🟢 enabled & active · 🔴 enabled, waiting for conditions · 🚫 disabled · ⚠️ blocked
-
 
 ---
 
@@ -278,7 +295,7 @@ When you open an automation from **Settings → Automations** you may see a warn
 
 ## Manual Commands
 
-These can be run from Advanced SSH & Web Terminal at any time:
+These can be run from **Advanced SSH & Web Terminal** (HA OS/Supervised) or inside the container (`docker exec -it homeassistant bash`) at any time:
 
 ```bash
 python3 /config/scripts/amber_graphql.py status        # battery status and active overrides

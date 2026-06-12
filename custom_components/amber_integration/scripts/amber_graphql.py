@@ -56,14 +56,14 @@
 #                                  - between intervals; .get() default does not handle None
 #                                  - Changed to `or {}` / `or 0` pattern to handle null
 #   v1.4    2026-04-11    Kane Li  - Fixed same None TypeError in status command liveMetrics
-#   v1.5    2026-05-10    Kane Li  - Renamed preserve command to preserve-charge
-#                                  - Amber API requires "preserve-charge" not "preserve"
 #                                  - Added battery offline detection via stateOfChargePercentage
 #                                  - None SOC = Amber cannot communicate with battery
 #                                  - Writes input_boolean.amber_battery_offline to HA
 #                                  - Reads previous state to notify only on transitions
 #                                  - Notifies once when offline, once when restored
 #                                  - Added call_ha_service() helper function
+#   v1.5    2026-05-10    Kane Li  - Renamed preserve command to preserve-charge
+#                                  - Amber API requires "preserve-charge" not "preserve"
 # =============================================================================
 
 import json
