@@ -25,29 +25,10 @@ echo "============================================="
 echo ""
 
 # -----------------------------------------------------------------------------
-# Python / pip checks (full mode only)
-# -----------------------------------------------------------------------------
-if [ "$MODE" = "full" ]; then
-    echo "🔍 Checking python3..."
-    if ! command -v python3 &>/dev/null; then
-        echo "   python3 not found, installing..."
-        apk add python3
-    fi
-    echo "   python3 $(python3 --version)"
-
-    echo "🔍 Checking pip3..."
-    if ! command -v pip3 &>/dev/null; then
-        echo "   pip3 not found, installing..."
-        apk add py3-pip
-    fi
-    echo "   pip3 found"
-    echo ""
-
-    echo "🐍 Installing pycognito..."
-    pip3 install pycognito --break-system-packages
-    echo ""
-else
-    echo "⚡ Sync mode — skipping python/pip checks"
+# pycognito is installed automatically by HA via manifest.json requirements.
+# No manual pip install needed.
+if [ "$MODE" = "sync" ]; then
+    echo "⚡ Sync mode — skipping full install steps"
     echo ""
 fi
 

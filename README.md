@@ -57,6 +57,7 @@ When configuring the VM network adapter use **Bridged Adapter** and **Paravirtua
 - Active **Amber Electric** subscription with Smart Shift enabled
 - **Smart Shift compatible battery** enrolled in the Amber app
 - **Home Assistant OS, Supervised, or Docker** with HACS installed
+- `pycognito` Python library — installed automatically by HA via `manifest.json`
 - Basic familiarity with Home Assistant
 
 ### Have on hand before starting
