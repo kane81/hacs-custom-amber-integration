@@ -351,7 +351,9 @@ fi
 if grep -q "lovelace-amber" $CONFIG; then
     echo "✅ lovelace dashboard entry — found"
 elif [ -f "$DASHBOARD_FILE" ]; then
-    cat >> $CONFIG << 'LOVELACE'
+    if ! grep -q "^lovelace:" $CONFIG; then
+        # No existing lovelace: key — safe to append the full block.
+        cat >> $CONFIG << 'LOVELACE'
 
 lovelace:
   dashboards:
@@ -362,7 +364,44 @@ lovelace:
       filename: lovelace/amber.yaml
       show_in_sidebar: true
 LOVELACE
-    echo "✅ lovelace dashboard entry — added"
+        echo "✅ lovelace dashboard entry — added"
+    elif ! grep -q "^lovelace:[[:space:]]*\$" $CONFIG; then
+        # lovelace: exists but isn't a plain mapping (e.g. "lovelace: !include lovelace.yaml")
+        # — too risky to auto-edit, leave it to the user.
+        echo "⚠️  Found an existing 'lovelace:' key that isn't a simple YAML mapping."
+        echo "    Skipping automatic dashboard registration to avoid breaking your config."
+        echo "    Add it manually — see README 'Using the Dashboard Card'."
+    elif grep -q "^  dashboards:[[:space:]]*\$" $CONFIG; then
+        # lovelace: exists with a dashboards: block already (other custom dashboards) —
+        # insert lovelace-amber as a sibling entry.
+        cat > /tmp/amber_lovelace_insert.sed << 'SEDEOF'
+/^  dashboards:$/a\
+    lovelace-amber:\
+      mode: yaml\
+      title: Amber\
+      icon: mdi:lightning-bolt\
+      filename: lovelace/amber.yaml\
+      show_in_sidebar: true
+SEDEOF
+        sed -i -f /tmp/amber_lovelace_insert.sed $CONFIG
+        rm -f /tmp/amber_lovelace_insert.sed
+        echo "✅ lovelace dashboard entry — added alongside your existing dashboards"
+    else
+        # lovelace: exists but has no dashboards: child yet — add both.
+        cat > /tmp/amber_lovelace_insert.sed << 'SEDEOF'
+/^lovelace:$/a\
+  dashboards:\
+    lovelace-amber:\
+      mode: yaml\
+      title: Amber\
+      icon: mdi:lightning-bolt\
+      filename: lovelace/amber.yaml\
+      show_in_sidebar: true
+SEDEOF
+        sed -i -f /tmp/amber_lovelace_insert.sed $CONFIG
+        rm -f /tmp/amber_lovelace_insert.sed
+        echo "✅ lovelace dashboard entry — added under your existing lovelace: block"
+    fi
 fi
 
 # -----------------------------------------------------------------------------

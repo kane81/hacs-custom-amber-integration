@@ -52,10 +52,12 @@ done
 
 echo ""
 echo "🗑️  Removing package..."
-if [ -f "/config/packages/amber.yaml" ]; then
-    rm /config/packages/amber.yaml
-    echo "   ✅ Removed: /config/packages/amber.yaml"
-fi
+for PKG in /config/packages/amber.yaml /config/package/amber.yaml; do
+    if [ -f "$PKG" ]; then
+        rm "$PKG"
+        echo "   ✅ Removed: $PKG"
+    fi
+done
 
 echo ""
 echo "🗑️  Removing scripts..."
@@ -71,6 +73,22 @@ echo "🗑️  Removing templates..."
 if [ -f "/config/templates/amber.yaml" ]; then
     rm /config/templates/amber.yaml
     echo "   ✅ Removed: /config/templates/amber.yaml"
+fi
+
+echo ""
+echo "🗑️  Removing dashboard..."
+CONFIG=/config/configuration.yaml
+if [ -f "/config/lovelace/amber.yaml" ]; then
+    rm /config/lovelace/amber.yaml
+    echo "   ✅ Removed: /config/lovelace/amber.yaml"
+fi
+if [ -f "$CONFIG" ] && grep -q "lovelace-amber:" "$CONFIG"; then
+    sed -i '/^\s*lovelace-amber:/,/show_in_sidebar: true/d' "$CONFIG"
+    echo "   ✅ Removed lovelace-amber entry from configuration.yaml"
+    if grep -A2 "^lovelace:" "$CONFIG" | grep -q "dashboards:\s*$"; then
+        echo "   ⚠️  configuration.yaml still has an empty 'lovelace: dashboards:' block —"
+        echo "      remove it manually if you have no other custom dashboards defined there."
+    fi
 fi
 
 echo ""
