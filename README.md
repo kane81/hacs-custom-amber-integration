@@ -8,6 +8,10 @@ Control your home battery from Home Assistant using [Amber Electric](https://www
 
 ☀️ Have a GoodWe solar inverter? Add automatic solar curtailment when prices are negative with the companion project: [hacs-goodwe-sems-curtailment](https://github.com/kane81/hacs-goodwe-sems-curtailment)
 
+🎥 **[Watch the How to Install video](https://www.youtube.com/watch?v=9usTtqCdxsE)**
+
+[![How to Install video](https://img.youtube.com/vi/9usTtqCdxsE/hqdefault.jpg)](https://www.youtube.com/watch?v=9usTtqCdxsE)
+
 ---
 
 ## How It Works
