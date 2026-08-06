@@ -125,6 +125,27 @@ views:
               {{ (a/1000) | round(2) ~ ' kW' if a >= 1000 else a | round(0) | int ~ ' W' }}
               {%- endmacro -%}
 
+              {# Shared by the manual-action countdown and the battery
+                 time-to-full estimate below - factored out rather than
+                 duplicated, since both need the same hour/minute
+                 pluralization logic. #}
+              {%- macro fmt_duration(total_seconds) -%}
+              {%- set hh = total_seconds // 3600 -%}
+              {%- set mm = (total_seconds % 3600) // 60 -%}
+              {%- if hh > 0 -%}
+                {%- set hh_text = (hh | string) ~ ' hour' ~ ('s' if hh != 1 else '') -%}
+                {%- if mm > 0 -%}
+                  {{ hh_text }} {{ mm }} minute{{ 's' if mm != 1 else '' }}
+                {%- else -%}
+                  {{ hh_text }}
+                {%- endif -%}
+              {%- elif total_seconds >= 60 -%}
+                {{ mm }} minute{{ 's' if mm != 1 else '' }}
+              {%- else -%}
+                less than a minute
+              {%- endif -%}
+              {%- endmacro -%}
+
               {%- set batt_id = states('text.amber_smart_shift_power_battery_sensor') -%}
               {%- set batt_lvl_id = states('text.amber_smart_shift_power_battery_level_sensor') -%}
               {%- set solar_id = states('text.amber_smart_shift_power_solar_sensor') -%}
@@ -145,7 +166,15 @@ views:
                   {%- set power_soc = soc -%}
                 {%- endif -%}
                 {%- if battery_w < 0 -%}
-                  {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Charging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
+                  {%- set charge_line = '&nbsp;&nbsp;🔋 Battery — Charging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%' -%}
+                  {%- set battery_capacity_wh = states('sensor.amber_smart_shift_battery_capacity') | float(0) -%}
+                  {%- set charge_rate_w = battery_w | abs -%}
+                  {%- if battery_capacity_wh > 0 and charge_rate_w > 10 and power_soc < 100 -%}
+                    {%- set remaining_wh = battery_capacity_wh * (100 - power_soc) / 100 -%}
+                    {%- set eta_seconds = (remaining_wh / charge_rate_w * 3600) | int -%}
+                    {%- set charge_line = charge_line ~ ' - full in ' ~ fmt_duration(eta_seconds) -%}
+                  {%- endif -%}
+                  {%- set power.items = power.items + [charge_line] -%}
                 {%- elif battery_w > 0 -%}
                   {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Discharging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
                 {%- else -%}
@@ -197,21 +226,7 @@ views:
                 {%- if ends not in ['unknown', 'unavailable', 'none', None] -%}
                   {%- set remaining = (as_timestamp(ends) - as_timestamp(now())) | int -%}
                   {%- if remaining > 0 -%}
-                    {%- set hh = remaining // 3600 -%}
-                    {%- set mm = (remaining % 3600) // 60 -%}
-                    {%- if hh > 0 -%}
-                      {%- set hh_text = (hh | string) ~ ' hour' ~ ('s' if hh != 1 else '') -%}
-                      {%- if mm > 0 -%}
-                        {%- set duration_text = hh_text ~ ' ' ~ mm ~ ' minute' ~ ('s' if mm != 1 else '') -%}
-                      {%- else -%}
-                        {%- set duration_text = hh_text -%}
-                      {%- endif -%}
-                    {%- elif remaining >= 60 -%}
-                      {%- set duration_text = (mm | string) ~ ' minute' ~ ('s' if mm != 1 else '') -%}
-                    {%- else -%}
-                      {%- set duration_text = 'less than a minute' -%}
-                    {%- endif -%}
-                    {%- set remaining_text.value = ' — ends in ' ~ duration_text -%}
+                    {%- set remaining_text.value = ' — ends in ' ~ fmt_duration(remaining) -%}
                   {%- endif -%}
                 {%- endif -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;' ~ action_icon ~ ' ' ~ action_label ~ remaining_text.value] -%}
