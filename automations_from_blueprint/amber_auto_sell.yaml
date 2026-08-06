@@ -20,4 +20,3 @@
       rule_3_battery: number.amber_smart_shift_sell_rule_3_battery_above
       rule_3_price: number.amber_smart_shift_sell_rule_3_min_price
       override_duration: 60
-      notify: true

@@ -168,6 +168,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
         API error into something Home Assistant can show the user, wait out
         Amber's propagation delay, then refresh so entities reflect reality.
 
+        On failure this also raises a persistent_notification - the single
+        place that happens, regardless of whether the call came from a
+        dashboard button, a manual service call, or Auto Sell/Auto Buy.
+        Success is silent by design; routine charge/discharge/cancel
+        activity is visible on the dashboard status line instead, so a
+        notification only fires when something actually needs attention.
+
         The sleep is why the delay exists at all - Amber's backend takes a
         few seconds to apply a mutation, so refreshing immediately gets the
         pre-change state back. The switches solve this with an optimistic
@@ -179,7 +186,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
             try:
                 await operation(coordinator)
             except (AmberApiError, AmberAuthError) as err:
-                raise HomeAssistantError(f"{error_message}: {err}") from err
+                message = f"{error_message}: {err}"
+                await hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {"title": "Amber Smart Shift error", "message": message},
+                )
+                raise HomeAssistantError(message) from err
             await asyncio.sleep(OVERRIDE_SETTLE_SECONDS)
             await coordinator.async_request_refresh()
 

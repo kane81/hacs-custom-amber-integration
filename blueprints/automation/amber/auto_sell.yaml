@@ -166,11 +166,6 @@ blueprint:
           min: 5
           max: 240
           unit_of_measurement: min
-    notify:
-      name: Send notifications
-      default: true
-      selector:
-        boolean: {}
 
 mode: single
 max_exceeded: silent
@@ -202,7 +197,6 @@ actions:
       sell_price_id: !input sell_price_sensor
       battery_id: !input battery_sensor
       override_sensor_id: !input current_override_sensor
-      notify_enabled: !input notify
       r1_enable_id: !input rule_1_enable
       r1_battery_id: !input rule_1_battery
       r1_price_id: !input rule_1_price
@@ -216,17 +210,12 @@ actions:
   - variables:
       sell_price: "{{ states(sell_price_id) | float(0) }}"
       battery: "{{ states(battery_id) | float(0) }}"
-      # Two different checks, for two different questions:
-      #   export_active     - is a "discharge" override running at all, mine
-      #                        or not? Used only to avoid a repeat "started"
-      #                        notification if one was already running.
-      #   currently_exporting - is a "discharge" override running AND is it
-      #                        one THIS automation applied? Used for the
-      #                        cancel decision, so a manual toggle (or Auto
-      #                        Buy) never gets cancelled just because Auto
-      #                        Sell's own rules say it shouldn't be running -
-      #                        that was never its override to cancel.
-      export_active: "{{ states(override_sensor_id) == 'discharge' }}"
+      # currently_exporting - is a "discharge" override running AND is it
+      #                       one THIS automation applied? Used for the
+      #                       cancel decision, so a manual toggle (or Auto
+      #                       Buy) never gets cancelled just because Auto
+      #                       Sell's own rules say it shouldn't be running -
+      #                       that was never its override to cancel.
       currently_exporting: "{{ states(override_sensor_id) == 'discharge' and state_attr(override_sensor_id, 'source') == 'auto_sell' }}"
       # Both fallbacks (101, 999) are chosen so a rule can never accidentally
       # qualify if its threshold entity is briefly unavailable (e.g. right
@@ -258,7 +247,6 @@ actions:
           {% endif %}
         {% endfor %}
         {{ {"battery_threshold": result.battery_threshold, "min_price": result.min_price} }}
-      active_rule_battery: "{{ ns.battery_threshold }}"
       active_rule_price: "{{ ns.min_price }}"
       any_rule_selected: "{{ ns.battery_threshold is not none }}"
 
@@ -268,35 +256,17 @@ actions:
   - choose:
       # START, or keep alive while conditions still hold. The integration
       # skips the API call when the same override already has time left, so
-      # re-issuing every poll is cheap.
+      # re-issuing every poll is cheap. Success is silent - the dashboard
+      # status line already shows this; a failure raises its own
+      # persistent_notification from inside the integration.
       - conditions: "{{ should_export }}"
         sequence:
           - action: amber_integration.force_discharge
             data:
               duration: !input override_duration
               source: auto_sell
-          - if:
-              - "{{ notify_enabled and not export_active }}"
-            then:
-              - action: persistent_notification.create
-                data:
-                  title: Amber Auto Sell started
-                  message: >
-                    Exporting at {{ (sell_price * 100) | round(0) }}c/kWh
-                    (battery {{ battery | round(0) }}% > {{ active_rule_battery | round(0) }}%,
-                    threshold {{ (active_rule_price * 100) | round(0) }}c).
 
       # STOP - was exporting, conditions no longer hold
       - conditions: "{{ currently_exporting and not should_export }}"
         sequence:
           - action: amber_integration.cancel_override
-          - if:
-              - "{{ notify_enabled }}"
-            then:
-              - action: persistent_notification.create
-                data:
-                  title: Amber Auto Sell stopped
-                  message: >
-                    {% if not any_rule_selected %}No rule currently applies at {{ battery | round(0) }}% battery.
-                    {% else %}Sell price dropped to {{ (sell_price * 100) | round(0) }}c/kWh, below the {{ (active_rule_price * 100) | round(0) }}c threshold.
-                    {% endif %}
