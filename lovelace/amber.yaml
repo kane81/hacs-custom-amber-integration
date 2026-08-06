@@ -91,7 +91,7 @@ views:
               {%- set amber_text -%}
               **💲 Amber**
               &nbsp;&nbsp;Buy **{{ price(buy) }}** &nbsp;&nbsp; Sell **{{ price(sell) }}** &nbsp;&nbsp; Battery **{{ '⚠️ offline' if not online else (soc | round(0) | int ~ '%') }}**
-              &nbsp;&nbsp;Import **${{ '%.2f' | format(states(P ~ 'current_import_cost') | float(0) / 100) }}** &nbsp;&nbsp; Export **${{ '%.2f' | format((states(P ~ 'current_export_earnings') | float(0) / 100) | abs) }}** &nbsp;&nbsp; 💸 Expense **${{ '%.2f' | format((net / 100) | abs) }}**
+              &nbsp;&nbsp;Import **${{ '%.2f' | format(states(P ~ 'current_import_cost') | float(0) / 100) }}** &nbsp;&nbsp; Export **${{ '%.2f' | format((states(P ~ 'current_export_earnings') | float(0) / 100) | abs) }}** &nbsp;&nbsp; {{ '💰 Credit **$' ~ ('%.2f' | format(net / 100)) ~ '**' if net > 0 else '💸 Expense **$' ~ ('%.2f' | format((net / 100) | abs)) ~ '**' if net < 0 else '**$0.00**' }}
               &nbsp;&nbsp;Last price poll **{{ polled if polled in ['unknown','unavailable'] else (polled | as_timestamp | timestamp_custom('%I:%M %p')) }}**
               {%- endset -%}
 
