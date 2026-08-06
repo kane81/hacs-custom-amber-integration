@@ -149,9 +149,10 @@ echo "       be edited afterward by editing the YAML file directly - Home"
 echo "       Assistant deliberately locks UI editing for this kind of"
 echo "       dashboard, so there's no drag-and-drop editor for it."
 echo "    2) Manual - skip this and build your own instead, via Settings >"
-echo "       Dashboards. More setup, but fully editable in the UI. See"
-echo "       dashboard_card.txt for the entity groups to add, and the"
-echo "       README's 'Manually Adding the Card' section for the steps."
+echo "       Dashboards, pasting lovelace/amber.yaml into the Raw"
+echo "       configuration editor. Fully editable in the UI afterward -"
+echo "       see the README's 'Manually Adding the Card' section for"
+echo "       the exact steps."
 echo ""
 read -r -p "  Install the dashboard automatically? (Y/n): " dash_choice
 if [[ "$dash_choice" =~ ^[Nn]$ ]]; then

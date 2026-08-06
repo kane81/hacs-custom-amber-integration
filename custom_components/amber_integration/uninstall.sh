@@ -4,7 +4,9 @@
 # =============================================================================
 #
 # Removes what install.sh added: the blueprints, the automations created from
-# them, and the dashboard. The integration itself (Part 1) is NOT touched.
+# them, and the dashboard. Prompts for scope - remove everything, or just the
+# dashboard while leaving the blueprints, automations and rule settings in
+# place. The integration itself (Part 1) is NOT touched either way.
 #
 # To remove Part 1 as well, do that afterwards through the UI:
 #   Settings > Devices & Services > HA Custom Amber Electric Integration
@@ -35,12 +37,31 @@ echo "============================================="
 echo " Amber - Part 2 uninstaller"
 echo "============================================="
 echo ""
-echo "This removes the blueprints, their automations, and the dashboard."
-echo "The integration itself (Part 1) is NOT touched - remove that from"
-echo "Settings > Devices & Services if you want it gone too."
+echo "What do you want to remove?"
+echo ""
+echo "  1) Everything - blueprints, their automations, and the dashboard"
+echo "  2) Just the dashboard - keeps the blueprints, automations and"
+echo "     your rule settings untouched"
+echo ""
+read -r -p "Choice [1/2, default 1]: " scope_choice
+if [[ "$scope_choice" == "2" ]]; then
+    DASHBOARD_ONLY=true
+    echo ""
+    echo "This removes only the dashboard."
+    echo "The blueprints, automations, and the integration itself (Part 1)"
+    echo "are NOT touched."
+else
+    DASHBOARD_ONLY=false
+    echo ""
+    echo "This removes the blueprints, their automations, and the dashboard."
+    echo "The integration itself (Part 1) is NOT touched - remove that from"
+    echo "Settings > Devices & Services if you want it gone too."
+fi
 echo ""
 read -r -p "Continue? (y/N): " ans
 [[ "$ans" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+
+if [ "$DASHBOARD_ONLY" = false ]; then
 
 # --- automations ---
 echo ""
@@ -81,6 +102,8 @@ for f in /config/packages/amber.yaml /config/package/amber.yaml \
 done
 [ "$FOUND" = false ] && echo "  none found"
 
+fi
+
 # --- dashboard ---
 echo ""
 echo "Dashboard..."
@@ -119,7 +142,12 @@ echo ""
 echo " Restart Home Assistant:"
 echo "   Settings > System > Restart"
 echo ""
-echo " Your rules and thresholds are entities on the integration, so they"
-echo " are still there if you reinstall Part 2 later. They only disappear"
-echo " if you delete the integration itself."
+if [ "$DASHBOARD_ONLY" = true ]; then
+    echo " The blueprints and their automations are still installed and"
+    echo " enabled exactly as they were - only the dashboard is gone."
+else
+    echo " Your rules and thresholds are entities on the integration, so they"
+    echo " are still there if you reinstall Part 2 later. They only disappear"
+    echo " if you delete the integration itself."
+fi
 echo ""

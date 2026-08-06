@@ -214,18 +214,18 @@ views:
               {%- if not sr.any_enabled -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🚫 Auto Sell'] -%}
               {%- elif sell_active -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Sell — 🔋> ' ~ (sr.batt | round(0) | int) ~ '%, selling at ' ~ price(sell)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Sell — 🔋> ' ~ (sr.batt | round(0) | int) ~ '% selling at ' ~ price(sell)] -%}
               {%- elif sell_selected -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell — 🔋> ' ~ (sr.batt | round(0) | int) ~ '%, sell price >= ' ~ price(sr.price)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell — 🔋> ' ~ (sr.batt | round(0) | int) ~ '% sell price >= ' ~ price(sr.price)] -%}
               {%- else -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell'] -%}
               {%- endif -%}
               {%- if not br.any_enabled -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🚫 Auto Buy'] -%}
               {%- elif buy_active -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Buy — 🔋< ' ~ (br.batt | round(0) | int) ~ '%, buying at ' ~ price(buy)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Buy — 🔋< ' ~ (br.batt | round(0) | int) ~ '% buying at ' ~ price(buy)] -%}
               {%- elif buy_selected -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy — 🔋< ' ~ (br.batt | round(0) | int) ~ '%, buy price <= ' ~ price(br.price)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy — 🔋< ' ~ (br.batt | round(0) | int) ~ '% buy price <= ' ~ price(br.price)] -%}
               {%- else -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy'] -%}
               {%- endif -%}

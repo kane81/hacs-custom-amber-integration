@@ -159,58 +159,13 @@ The fuller the battery, the lower the price required to sell. Buy mirrors this �
 
 ### Manually adding the card
 
-Building the dashboard manually allows full customisation in the HA Dashboard UI editor — cards can be reordered, restyled, or supplemented with additional controls. The trade-off is the absence of the live price summary and countdown timer, which rely on a Jinja template the Entities/Tile card types cannot reproduce.
+Creating the dashboard this way keeps it fully customisable in the HA Dashboard UI editor afterward — cards can be reordered, restyled, or supplemented with additional controls — while still including the full status card, live price summary and countdown timer.
 
-**Setup:**
+1. **Settings → Dashboards → + Add Dashboard** → *New dashboard from scratch* → set a name and other details, then create it
+2. Open the new dashboard → **Edit Dashboard** → **⋮** → **Raw configuration editor**
+3. Delete the default content, then copy and paste in the full contents of [`lovelace/amber.yaml`](https://github.com/kane81/hacs-custom-amber-integration/blob/main/lovelace/amber.yaml) → **Save**
 
-1. **Settings → Dashboards → + Add Dashboard** → *New dashboard from scratch* → provide a name
-2. Open it → **Edit Dashboard**
-3. Rename the first section to *Status*. Add a card → **Markdown**, and paste in the content from [`status_card.txt`](custom_components/amber_integration/status_card.txt) → **Save**
-
-**Status section — add these as Tile cards, in order:**
-
-| Entity | Tile name | Settings |
-| --- | --- | --- |
-| `button.amber_smart_shift_force_refresh` | Refresh Now | Hide entity state; Layout: Full width |
-| `switch.amber_smart_shift_enable_smart_shift` | Smart Shift | Layout: Full width |
-| *(heading card)* | Manual Controls | — |
-| `switch.amber_smart_shift_manual_charge` | Manual Charge | Layout: Full width |
-| `switch.amber_smart_shift_manual_discharge` | Manual Discharge | Layout: Full width |
-| `switch.amber_smart_shift_manual_preserve` | Manual Preserve | Layout: Full width |
-| `switch.amber_smart_shift_manual_self_consumption` | Manual Self Consumption | Layout: Full width |
-| `number.amber_smart_shift_manual_toggle_duration` | Run For | Features → Add Feature → Numeric Input → style Slider; Layout: Full width |
-
-**Automations section — add a second section (same as step 3, without the Markdown card), then add these as Tile cards:**
-
-| Entity | Tile name | Settings |
-| --- | --- | --- |
-| `switch.amber_smart_shift_auto_disable_smart_shift_when_idle` | Auto Disable Smart Shift When Idle | Layout: Full width |
-| *(heading card)* | Sell Rule 1 | — |
-| `switch.amber_smart_shift_enable_sell_rule_1` | Enable | Layout: Full width |
-| `number.amber_smart_shift_sell_rule_1_battery_above` | Battery Above | — |
-| `number.amber_smart_shift_sell_rule_1_min_price` | Min Sell Price | — |
-| *(heading card)* | Sell Rule 2 | — |
-| `switch.amber_smart_shift_enable_sell_rule_2` | Enable | Layout: Full width |
-| `number.amber_smart_shift_sell_rule_2_battery_above` | Battery Above | — |
-| `number.amber_smart_shift_sell_rule_2_min_price` | Min Sell Price | — |
-| *(heading card)* | Sell Rule 3 | — |
-| `switch.amber_smart_shift_enable_sell_rule_3` | Enable | Layout: Full width |
-| `number.amber_smart_shift_sell_rule_3_battery_above` | Battery Above | — |
-| `number.amber_smart_shift_sell_rule_3_min_price` | Min Sell Price | — |
-| *(heading card)* | Buy Rule 1 | — |
-| `switch.amber_smart_shift_enable_buy_rule_1` | Enable | Layout: Full width |
-| `number.amber_smart_shift_buy_rule_1_battery_below` | Battery Below | — |
-| `number.amber_smart_shift_buy_rule_1_max_price` | Max Buy Price | — |
-| *(heading card)* | Buy Rule 2 | — |
-| `switch.amber_smart_shift_enable_buy_rule_2` | Enable | Layout: Full width |
-| `number.amber_smart_shift_buy_rule_2_battery_below` | Battery Below | — |
-| `number.amber_smart_shift_buy_rule_2_max_price` | Max Buy Price | — |
-| *(heading card)* | Buy Rule 3 | — |
-| `switch.amber_smart_shift_enable_buy_rule_3` | Enable | Layout: Full width |
-| `number.amber_smart_shift_buy_rule_3_battery_below` | Battery Below | — |
-| `number.amber_smart_shift_buy_rule_3_max_price` | Max Buy Price | — |
-
-The two Number tiles per rule are left at default width so they sit side by side; only the Enable switch uses Full width. This matches the auto-installed dashboard's layout and naming exactly. `custom_components/amber_integration/dashboard_card.txt` contains the complete entity list as a plain checklist, for reference in place of the tables above.
+The dashboard is now fully populated and editable through the normal HA UI editor.
 
 ---
 
@@ -238,7 +193,7 @@ The two Number tiles per rule are left at default width so they sit side by side
 bash /config/custom_components/amber_integration/uninstall.sh
 ```
 
-Removes the blueprints, their automations, and the dashboard. Rules and thresholds are preserved, as they are entities on the integration itself.
+Prompts for scope: everything (blueprints, their automations, and the dashboard) or just the dashboard, leaving the blueprints, automations and rule settings untouched. Rules and thresholds are preserved either way, as they are entities on the integration itself.
 
 **Part 1:** Settings → Devices & Services → *HA Custom Amber Electric Integration* → ⋮ → **Delete**, then remove the repository from HACS.
 
