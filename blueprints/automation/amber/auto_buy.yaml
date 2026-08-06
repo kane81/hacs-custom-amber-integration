@@ -1,0 +1,302 @@
+blueprint:
+  name: Amber Auto Buy
+  description: >
+    Charges your battery from the grid using up to three independent price
+    rules, each keyed to a battery level - the emptier the battery, the more
+    urgent the need, so the emptiest tier will accept paying the most.
+
+
+    No time window - each rule is simply on or off. Which rule applies at any
+    moment is worked out from the current battery level, not from which slot
+    you put a rule in: whichever enabled rule's battery condition is
+    currently satisfied by the narrowest margin (the lowest "battery below"
+    threshold that's still true) is the one used. Swap two rules' numbers
+    around and the resulting behaviour is identical - this is a value
+    comparison, not a "check Rule 1 first" sequence.
+
+
+    Requires the HA Custom Amber Electric Integration (Part 1). Every entity
+    below is provided by it - the defaults should already be selected.
+  domain: automation
+  author: kane81
+  source_url: https://github.com/kane81/hacs-custom-amber-integration/blob/main/blueprints/automation/amber/auto_buy.yaml
+
+  input:
+    buy_price_sensor:
+      name: Buy price sensor
+      default: sensor.amber_smart_shift_buy_price
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: amber_integration
+    battery_sensor:
+      name: Battery level sensor
+      default: sensor.amber_smart_shift_battery_level
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: amber_integration
+    battery_connection:
+      name: Battery connection sensor
+      default: binary_sensor.amber_smart_shift_battery_connection
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              integration: amber_integration
+    current_override_sensor:
+      name: Current manual action sensor
+      default: sensor.amber_smart_shift_current_manual_action
+      description: >
+        Tells the automation whether a battery override is already running,
+        so it doesn't re-issue one unnecessarily.
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: amber_integration
+    price_poll_sensor:
+      name: Last price poll sensor
+      default: sensor.amber_smart_shift_last_price_poll
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: amber_integration
+    stats_poll_sensor:
+      name: Last stats poll sensor
+      description: >
+        Also drives re-evaluation - the fast battery-telemetry poll (~30s),
+        so a battery level crossing a rule's threshold is picked up quickly
+        rather than waiting for the next price update.
+      default: sensor.amber_smart_shift_last_stats_poll
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: amber_integration
+
+    rule_1_enable:
+      name: "Rule 1: enable"
+      default: switch.amber_smart_shift_enable_buy_rule_1
+      selector:
+        entity:
+          filter:
+            - domain: switch
+              integration: amber_integration
+    rule_1_battery:
+      name: "Rule 1: battery below"
+      default: number.amber_smart_shift_buy_rule_1_battery_below
+      selector:
+        entity:
+          filter:
+            - domain: number
+              integration: amber_integration
+    rule_1_price:
+      name: "Rule 1: maximum buy price"
+      default: number.amber_smart_shift_buy_rule_1_max_price
+      selector:
+        entity:
+          filter:
+            - domain: number
+              integration: amber_integration
+
+    rule_2_enable:
+      name: "Rule 2: enable"
+      default: switch.amber_smart_shift_enable_buy_rule_2
+      selector:
+        entity:
+          filter:
+            - domain: switch
+              integration: amber_integration
+    rule_2_battery:
+      name: "Rule 2: battery below"
+      default: number.amber_smart_shift_buy_rule_2_battery_below
+      selector:
+        entity:
+          filter:
+            - domain: number
+              integration: amber_integration
+    rule_2_price:
+      name: "Rule 2: maximum buy price"
+      default: number.amber_smart_shift_buy_rule_2_max_price
+      selector:
+        entity:
+          filter:
+            - domain: number
+              integration: amber_integration
+
+    rule_3_enable:
+      name: "Rule 3: enable"
+      default: switch.amber_smart_shift_enable_buy_rule_3
+      selector:
+        entity:
+          filter:
+            - domain: switch
+              integration: amber_integration
+    rule_3_battery:
+      name: "Rule 3: battery below"
+      default: number.amber_smart_shift_buy_rule_3_battery_below
+      selector:
+        entity:
+          filter:
+            - domain: number
+              integration: amber_integration
+    rule_3_price:
+      name: "Rule 3: maximum buy price"
+      default: number.amber_smart_shift_buy_rule_3_max_price
+      selector:
+        entity:
+          filter:
+            - domain: number
+              integration: amber_integration
+
+    override_duration:
+      name: Override duration (minutes)
+      description: >
+        How long each charge instruction lasts. It's re-issued while
+        conditions still hold, so this is just a safety timeout - if Home
+        Assistant stops for any reason, the battery returns to normal after
+        this long rather than charging indefinitely.
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 240
+          unit_of_measurement: min
+    notify:
+      name: Send notifications
+      default: true
+      selector:
+        boolean: {}
+
+mode: single
+max_exceeded: silent
+
+triggers:
+  - trigger: state
+    entity_id: !input price_poll_sensor
+  - trigger: state
+    entity_id: !input stats_poll_sensor
+  - trigger: state
+    entity_id:
+      - !input rule_1_enable
+      - !input rule_1_battery
+      - !input rule_1_price
+      - !input rule_2_enable
+      - !input rule_2_battery
+      - !input rule_2_price
+      - !input rule_3_enable
+      - !input rule_3_battery
+      - !input rule_3_price
+
+conditions:
+  - condition: state
+    entity_id: !input battery_connection
+    state: "on"
+
+actions:
+  - variables:
+      buy_price_id: !input buy_price_sensor
+      battery_id: !input battery_sensor
+      override_sensor_id: !input current_override_sensor
+      notify_enabled: !input notify
+      r1_enable_id: !input rule_1_enable
+      r1_battery_id: !input rule_1_battery
+      r1_price_id: !input rule_1_price
+      r2_enable_id: !input rule_2_enable
+      r2_battery_id: !input rule_2_battery
+      r2_price_id: !input rule_2_price
+      r3_enable_id: !input rule_3_enable
+      r3_battery_id: !input rule_3_battery
+      r3_price_id: !input rule_3_price
+
+  - variables:
+      buy_price: "{{ states(buy_price_id) | float(999) }}"
+      battery: "{{ states(battery_id) | float(0) }}"
+      # Two different checks, for two different questions:
+      #   charge_active     - is a "charge" override running at all, mine or
+      #                        not? Used only to avoid a repeat "started"
+      #                        notification if one was already running.
+      #   currently_charging - is a "charge" override running AND is it one
+      #                        THIS automation applied? Used for the cancel
+      #                        decision, so a manual toggle (or Auto Sell)
+      #                        never gets cancelled just because Auto Buy's
+      #                        own rules say it shouldn't be running - that
+      #                        was never its override to cancel.
+      charge_active: "{{ states(override_sensor_id) == 'charge' }}"
+      currently_charging: "{{ states(override_sensor_id) == 'charge' and state_attr(override_sensor_id, 'source') == 'auto_buy' }}"
+      # Both fallbacks (-1, -999) are chosen so a rule can never accidentally
+      # qualify if its threshold entity is briefly unavailable (e.g. right
+      # after a restart, before it's restored its value) - -1 makes
+      # "battery < threshold" false for any real battery %, -999 makes
+      # "buy_price <= threshold" false for any real price. Fail closed, not
+      # open: an unavailable threshold should never let a rule silently fire
+      # on whatever the other value happens to be.
+      rules: >
+        {{ [
+          (is_state(r1_enable_id, 'on'), states(r1_battery_id) | float(-1), states(r1_price_id) | float(-999)),
+          (is_state(r2_enable_id, 'on'), states(r2_battery_id) | float(-1), states(r2_price_id) | float(-999)),
+          (is_state(r3_enable_id, 'on'), states(r3_battery_id) | float(-1), states(r3_price_id) | float(-999)),
+        ] }}
+
+  # Pick the enabled+satisfied rule with the LOWEST battery threshold - the
+  # narrowest, most specific match. Genuinely order-independent: this is a
+  # min() over values, not a first-match check, so it doesn't matter which
+  # rule slot a given number is entered into.
+  - variables:
+      ns: >
+        {% set result = namespace(battery_threshold=none, max_price=none) %}
+        {% for enabled, batt, price in rules %}
+          {% if enabled and battery < batt %}
+            {% if result.battery_threshold is none or batt < result.battery_threshold %}
+              {% set result.battery_threshold = batt %}
+              {% set result.max_price = price %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {{ {"battery_threshold": result.battery_threshold, "max_price": result.max_price} }}
+      active_rule_battery: "{{ ns.battery_threshold }}"
+      active_rule_price: "{{ ns.max_price }}"
+      any_rule_selected: "{{ ns.battery_threshold is not none }}"
+
+  - variables:
+      should_charge: "{{ any_rule_selected and buy_price <= active_rule_price }}"
+
+  - choose:
+      # START, or keep alive while conditions still hold. The integration
+      # skips the API call when the same override already has time left, so
+      # re-issuing every poll is cheap.
+      - conditions: "{{ should_charge }}"
+        sequence:
+          - action: amber_integration.force_charge
+            data:
+              duration: !input override_duration
+              source: auto_buy
+          - if:
+              - "{{ notify_enabled and not charge_active }}"
+            then:
+              - action: persistent_notification.create
+                data:
+                  title: Amber Auto Buy started
+                  message: >
+                    Charging at {{ (buy_price * 100) | round(0) }}c/kWh
+                    (battery {{ battery | round(0) }}% < {{ active_rule_battery | round(0) }}%,
+                    threshold {{ (active_rule_price * 100) | round(0) }}c).
+
+      # STOP - was charging, conditions no longer hold
+      - conditions: "{{ currently_charging and not should_charge }}"
+        sequence:
+          - action: amber_integration.cancel_override
+          - if:
+              - "{{ notify_enabled }}"
+            then:
+              - action: persistent_notification.create
+                data:
+                  title: Amber Auto Buy stopped
+                  message: >
+                    {% if not any_rule_selected %}No rule currently applies at {{ battery | round(0) }}% battery.
+                    {% else %}Buy price rose to {{ (buy_price * 100) | round(0) }}c/kWh, above the {{ (active_rule_price * 100) | round(0) }}c threshold.
+                    {% endif %}

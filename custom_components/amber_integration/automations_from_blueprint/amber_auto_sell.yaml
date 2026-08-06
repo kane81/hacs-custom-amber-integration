@@ -1,0 +1,23 @@
+- id: amber_auto_sell
+  alias: Amber Auto Sell
+  description: Auto-generated from the auto_sell.yaml blueprint by install.sh. Edit the inputs via the automation editor UI, or delete and re-run install.sh to reset to defaults.
+  use_blueprint:
+    path: amber/auto_sell.yaml
+    input:
+      sell_price_sensor: sensor.amber_smart_shift_sell_price
+      battery_sensor: sensor.amber_smart_shift_battery_level
+      battery_connection: binary_sensor.amber_smart_shift_battery_connection
+      current_override_sensor: sensor.amber_smart_shift_current_manual_action
+      price_poll_sensor: sensor.amber_smart_shift_last_price_poll
+      stats_poll_sensor: sensor.amber_smart_shift_last_stats_poll
+      rule_1_enable: switch.amber_smart_shift_enable_sell_rule_1
+      rule_1_battery: number.amber_smart_shift_sell_rule_1_battery_above
+      rule_1_price: number.amber_smart_shift_sell_rule_1_min_price
+      rule_2_enable: switch.amber_smart_shift_enable_sell_rule_2
+      rule_2_battery: number.amber_smart_shift_sell_rule_2_battery_above
+      rule_2_price: number.amber_smart_shift_sell_rule_2_min_price
+      rule_3_enable: switch.amber_smart_shift_enable_sell_rule_3
+      rule_3_battery: number.amber_smart_shift_sell_rule_3_battery_above
+      rule_3_price: number.amber_smart_shift_sell_rule_3_min_price
+      override_duration: 60
+      notify: true

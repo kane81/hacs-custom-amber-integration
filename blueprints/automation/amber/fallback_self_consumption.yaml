@@ -1,0 +1,137 @@
+blueprint:
+  name: Amber Auto Smart Shift Off
+  description: >
+    Turns Amber's Smart Shift optimisation off whenever nothing else is
+    driving the battery, so its own plan can't dispatch it against your
+    wishes. No time window - active any time the enable switch is on and no
+    other automation has taken over.
+
+
+    Turns Smart Shift back on the moment you turn this off, handing control
+    back. While an Auto Sell or Auto Buy override is running, Smart
+    Shift is left alone here - applying an override auto-enables Smart Shift
+    on its own if needed, so there's nothing for this automation to do in
+    that case.
+
+
+    Relies on your battery/inverter's own default behaviour once Amber's
+    Smart Shift plan is disabled and no override is active - normally plain
+    self consumption (solar charges it, house load discharges it), but that
+    is your inverter's own logic, not something this automation or Amber
+    directly enforces.
+
+
+    Requires the HA Custom Amber Electric Integration (Part 1).
+  domain: automation
+  author: kane81
+  source_url: https://github.com/kane81/hacs-custom-amber-integration/blob/main/blueprints/automation/amber/fallback_self_consumption.yaml
+
+  input:
+    enable_switch:
+      name: Enable switch
+      default: switch.amber_smart_shift_auto_disable_smart_shift_when_idle
+      description: Turn this off to hand control back to Smart Shift.
+      selector:
+        entity:
+          filter:
+            - domain: switch
+              integration: amber_integration
+    current_override_sensor:
+      name: Current manual action sensor
+      default: sensor.amber_smart_shift_current_manual_action
+      description: >
+        Tells the automation whether Auto Sell/Buy already has
+        control, so it stands aside rather than fighting them for Smart
+        Shift.
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: amber_integration
+    smart_shift_switch:
+      name: Smart Shift switch
+      default: switch.amber_smart_shift_enable_smart_shift
+      description: The switch this automation turns on and off.
+      selector:
+        entity:
+          filter:
+            - domain: switch
+              integration: amber_integration
+    battery_connection:
+      name: Battery connection sensor
+      default: binary_sensor.amber_smart_shift_battery_connection
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              integration: amber_integration
+
+mode: single
+max_exceeded: silent
+
+triggers:
+  - trigger: state
+    entity_id: !input enable_switch
+  - trigger: state
+    entity_id: !input current_override_sensor
+  - trigger: state
+    entity_id: !input smart_shift_switch
+  # Re-assert the desired state promptly after a restart, rather than
+  # waiting for one of the above to next change on its own.
+  - trigger: homeassistant
+    event: start
+
+conditions:
+  - condition: state
+    entity_id: !input battery_connection
+    state: "on"
+
+actions:
+  - variables:
+      enable_switch_id: !input enable_switch
+      override_sensor_id: !input current_override_sensor
+      smart_shift_id: !input smart_shift_switch
+  - variables:
+      enabled: "{{ is_state(enable_switch_id, 'on') }}"
+      current: "{{ states(override_sensor_id) }}"
+      ss_on: "{{ is_state(smart_shift_id, 'on') }}"
+  - variables:
+      # Something else has control - stand aside. This covers every
+      # override value there is, manual or automated: charge/discharge
+      # (Auto Buy/Sell, or the matching manual toggles), preserve-charge
+      # and self-consume (manual toggles only - no automation produces
+      # either). Applying any of them auto-enables Smart Shift on its own
+      # if it was off, so there's nothing for this automation to do while
+      # one is active - and previously, self-consume being missing here
+      # meant turning on Manual Self Consumption got undone immediately:
+      # this automation saw "nothing else running" (self-consume wasn't
+      # in the list), decided it should hold Smart Shift off, and turned
+      # it straight back off right after the manual toggle had re-enabled
+      # it - which stops the override from actually taking effect.
+      other_override: "{{ current in ['charge', 'discharge', 'preserve-charge', 'self-consume'] }}"
+  - variables:
+      should_hold_off: "{{ enabled and not other_override }}"
+
+  - choose:
+      # HOLD OFF - nothing else needs Smart Shift, keep it off
+      - conditions: "{{ should_hold_off and ss_on }}"
+        sequence:
+          - action: amber_integration.smartshift_off
+            data:
+              source: auto_disable_smart_shift_when_idle
+
+      # RELEASE - only when THIS automation was the one that turned Smart
+      # Shift off. Checking "not enabled and not ss_on" alone was the bug
+      # here: with the automation disabled, that pair is true the instant
+      # anything else turns Smart Shift off - including a manual toggle -
+      # and this would turn it straight back on, overriding a deliberate
+      # manual action that had nothing to do with this automation. The
+      # off_source attribute (see switch.py) is who actually turned it off,
+      # so this only fires for an off-state THIS automation itself caused.
+      - conditions: >-
+          {{ not enabled and not ss_on and
+             state_attr(smart_shift_id, 'off_source') == 'auto_disable_smart_shift_when_idle' }}
+        sequence:
+          - action: amber_integration.smartshift_on
+            data:
+              source: auto_disable_smart_shift_when_idle

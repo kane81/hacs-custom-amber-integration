@@ -1,95 +1,125 @@
 #!/bin/bash
 # =============================================================================
-# Home Assistant Custom Amber Electric Integration - Uninstall Script
+# Amber - Part 2 uninstaller
 # =============================================================================
 #
-# HACS only removes the custom_components folder when you uninstall.
-# Run this script to fully remove all integration files and helpers.
+# Removes what install.sh added: the blueprints, the automations created from
+# them, and the dashboard. The integration itself (Part 1) is NOT touched.
+#
+# To remove Part 1 as well, do that afterwards through the UI:
+#   Settings > Devices & Services > HA Custom Amber Electric Integration
+#   > three-dot menu > Delete
+#
+# Your settings (rules, prices, battery thresholds) live on the integration
+# as entities, so they disappear with Part 1, not with this script.
 #
 # Usage:
 #   bash /config/custom_components/amber_integration/uninstall.sh
-#
-# This script will:
-#   - Remove all automation files
-#   - Remove the package file (helpers, shell commands, notify)
-#   - Remove scripts
-#   - Remove templates
-#   - Remove configuration.yaml entries (if safe to do so)
-#
-# After running, restart HA to apply changes.
 # =============================================================================
 
-echo "============================================="
-echo " Home Assistant Custom Amber Electric"
-echo " Integration - Uninstall Script"
-echo "============================================="
-echo ""
-echo "⚠️  This will remove all Amber integration files."
-echo "    Your secrets.yaml credentials will NOT be removed."
-echo ""
-read -r -p "Are you sure you want to uninstall? (y/N): " confirm
-if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    echo "Aborted."
-    exit 0
-fi
+set -e
 
+SRC=/config/custom_components/amber_integration
+CONFIG=/config/configuration.yaml
+
+# Automations created by install.sh, plus every name used by earlier
+# versions of this project - so this cleans up regardless of which version
+# was originally installed.
+CURRENT_AUTOMATIONS="amber_auto_sell amber_auto_buy amber_fallback_self_consumption"
+LEGACY_AUTOMATIONS="amber_force_export amber_force_charge amber_block_smart_shift \
+amber_price_poll amber_auth_login_startup amber_battery_connection \
+amber_negative_price_notify amber_force_export_at_custom_fit \
+amber_force_charge_on_custom_rate amber_hacs_update"
+
+echo "============================================="
+echo " Amber - Part 2 uninstaller"
+echo "============================================="
 echo ""
-echo "🗑️  Removing automations..."
-for f in \
-    amber_auth_login_startup \
-    amber_price_poll \
-    amber_block_smart_shift \
-    amber_force_export_at_custom_fit \
-    amber_force_charge_on_custom_rate \
-    amber_negative_price_notify \
-    amber_battery_connection \
-    amber_hacs_update; do
-    if [ -f "/config/automations/${f}.yaml" ]; then
-        rm "/config/automations/${f}.yaml"
-        echo "   ✅ Removed: /config/automations/${f}.yaml"
+echo "This removes the blueprints, their automations, and the dashboard."
+echo "The integration itself (Part 1) is NOT touched - remove that from"
+echo "Settings > Devices & Services if you want it gone too."
+echo ""
+read -r -p "Continue? (y/N): " ans
+[[ "$ans" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+
+# --- automations ---
+echo ""
+echo "Removing automations..."
+FOUND=false
+for f in $CURRENT_AUTOMATIONS $LEGACY_AUTOMATIONS; do
+    if [ -f "/config/automations/$f.yaml" ]; then
+        rm "/config/automations/$f.yaml"
+        echo "  removed $f.yaml"
+        FOUND=true
     fi
 done
+[ "$FOUND" = false ] && echo "  none found"
 
+# --- blueprints ---
 echo ""
-echo "🗑️  Removing package..."
-if [ -f "/config/packages/amber.yaml" ]; then
-    rm /config/packages/amber.yaml
-    echo "   ✅ Removed: /config/packages/amber.yaml"
+echo "Removing blueprints..."
+if [ -d /config/blueprints/automation/amber ]; then
+    rm -rf /config/blueprints/automation/amber
+    echo "  removed /config/blueprints/automation/amber/"
+else
+    echo "  none found"
 fi
 
+# --- leftovers from versions that used a package and shell scripts ---
 echo ""
-echo "🗑️  Removing scripts..."
-for f in amber_graphql.py amber_auth.py; do
-    if [ -f "/config/scripts/$f" ]; then
-        rm "/config/scripts/$f"
-        echo "   ✅ Removed: /config/scripts/$f"
+echo "Removing leftovers from earlier versions..."
+FOUND=false
+for f in /config/packages/amber.yaml /config/package/amber.yaml \
+         /config/scripts/amber_graphql.py /config/scripts/amber_auth.py \
+         /config/scripts/configure_smtp.py /config/scripts/amber_token_cache.json \
+         /config/.amber_token_cache /config/templates/amber.yaml; do
+    if [ -f "$f" ]; then
+        rm "$f"
+        echo "  removed $f"
+        FOUND=true
     fi
 done
+[ "$FOUND" = false ] && echo "  none found"
 
+# --- dashboard ---
 echo ""
-echo "🗑️  Removing templates..."
-if [ -f "/config/templates/amber.yaml" ]; then
-    rm /config/templates/amber.yaml
-    echo "   ✅ Removed: /config/templates/amber.yaml"
+echo "Dashboard..."
+# mode: yaml dashboards are read-only in the UI, so the only way this could
+# differ from what was installed is a direct file edit - not worth checking
+# for, just remove it.
+DASH=/config/lovelace/amber.yaml
+REMOVED_DASH=false
+if [ -f "$DASH" ]; then
+    rm "$DASH"
+    echo "  removed"
+    REMOVED_DASH=true
+else
+    echo "  none found"
 fi
 
-echo ""
-echo "🗑️  Removing auth cache..."
-if [ -f "/config/.amber_token_cache" ]; then
-    rm /config/.amber_token_cache
-    echo "   ✅ Removed: /config/.amber_token_cache"
+# Drop the sidebar entry only if the file is actually gone, otherwise HA
+# errors on a dashboard pointing at a missing file.
+if [ "$REMOVED_DASH" = true ] && grep -q "lovelace-amber" "$CONFIG"; then
+    python3 - "$CONFIG" << 'PYEOF'
+import re, sys
+p = sys.argv[1]
+cfg = open(p).read()
+cfg = re.sub(r'\n    lovelace-amber:\n(?:      .*\n)+', '\n', cfg)
+cfg = re.sub(r'\nlovelace:\n  dashboards:\n(?=\n|$)', '\n', cfg)
+open(p, 'w').write(cfg)
+PYEOF
+    echo "  removed lovelace-amber from configuration.yaml"
 fi
 
 echo ""
 echo "============================================="
-echo " ✅ Uninstall complete!"
-echo ""
-echo " Next steps:"
-echo "  1. Remove HACS integration: HACS → Integrations → Amber → Remove"
-echo "  2. Restart HA: Settings → System → Restart"
-echo "  3. Optionally remove credentials from /config/secrets.yaml:"
-echo "     amber_email, amber_password, ha_long_lived_token"
-echo "  4. If no other integrations use packages, remove from configuration.yaml:"
-echo "     homeassistant:"
-echo "       packages: !include_dir_named packages/"
+echo " Done"
 echo "============================================="
+echo ""
+echo " Restart Home Assistant:"
+echo "   Settings > System > Restart"
+echo ""
+echo " Your rules and thresholds are entities on the integration, so they"
+echo " are still there if you reinstall Part 2 later. They only disappear"
+echo " if you delete the integration itself."
+echo ""

@@ -1,7 +1,8 @@
 {
-  "name": "Home Assistant Custom Amber Electric Integration",
-  "render_readme": false,
-  "domains": ["automation", "input_number", "input_boolean", "input_datetime", "notify"],
-  "homeassistant": "2024.1.0",
-  "country": ["AU"]
+  "name": "HA Custom Amber Electric Integration",
+  "render_readme": true,
+  "homeassistant": "2024.4.0",
+  "country": [
+    "AU"
+  ]
 }

@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Custom Amber Electric Integration",
+        "description": "Not the official Amber Electric integration. This custom integration controls battery overrides via the Smart Shift API. Sign in with your Amber Electric app credentials — your site and battery are detected automatically.",
+        "data": {
+          "email": "Email address",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "Your Amber password has changed or the login expired. Enter your password again.",
+        "data": {
+          "password": "Password"
+        }
+      },
+      "power_sensors": {
+        "title": "Power sensors (optional)",
+        "description": "Point the dashboard's Power card at your own battery, solar, load and grid sensors. Every field here is optional - leave any (or all) of them blank and skip this entirely if you'd rather. You can always set these later, one at a time, under the integration's Configuration section - nothing here is final.",
+        "data": {
+          "power_battery_sensor": "Battery power sensor",
+          "power_battery_level_sensor": "Battery level sensor (optional - defaults to Amber's own reading if left blank)",
+          "power_solar_sensor": "Solar power sensor",
+          "power_load_sensor": "Load / house consumption sensor",
+          "power_grid_sensor": "Grid import/export sensor"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid email or password.",
+      "cannot_connect": "Could not reach the Amber API. Check your connection and try again.",
+      "unknown": "Unexpected error. Check the Home Assistant logs."
+    },
+    "abort": {
+      "already_configured": "This Amber account is already set up.",
+      "reauth_successful": "Re-authentication successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HA Custom Amber Electric Integration options",
+        "description": "Two independent poll intervals. Prices only update every 5 minutes on Amber's side regardless of the Market Price interval, so there's nothing to gain from setting it lower than that. Statistics (battery SOC, battery power, override status) are closer to real-time, which is what the faster Statistics interval is for.",
+        "data": {
+          "stats_scan_interval": "Statistics Poll Interval (seconds)",
+          "price_scan_interval": "Market Price Poll Interval (seconds)"
+        }
+      }
+    }
+  }
+}

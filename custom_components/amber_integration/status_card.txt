@@ -1,0 +1,194 @@
+{% set P = 'sensor.amber_smart_shift_' %}
+{% macro price(d) -%}
+{%- set c = d * 100 -%}
+{%- if (c | abs) >= 100 -%}
+{{ '-' if c < 0 else '' }}${{ '%.2f' | format((c | abs) / 100) }}
+{%- else -%}
+{{ c | round(0) | int if c >= 0 else c | round(0, 'floor') | int }}c
+{%- endif -%}
+{%- endmacro %}
+
+{% set buy = states(P ~ 'buy_price') | float(0) %}
+{% set sell = states(P ~ 'sell_price') | float(0) %}
+{% set soc = states(P ~ 'battery_level') | float(0) %}
+{% set online = is_state('binary_sensor.amber_smart_shift_battery_connection', 'on') %}
+{% set net = states(P ~ 'current_net_earnings') | float(0) %}
+{% set manual = states(P ~ 'current_manual_action') %}
+{% set polled = states(P ~ 'last_price_poll') %}
+
+{# -------------------------------------------------------
+   Sell rule selection - mirrors auto_sell.yaml's own logic
+   exactly (highest satisfied battery threshold wins). Kept
+   in sync by hand since a dashboard markdown card can't
+   share Jinja with a blueprint file.
+   ------------------------------------------------------- #}
+{% set sell_rules = [
+  (is_state('switch.amber_smart_shift_enable_sell_rule_1','on'), states('number.amber_smart_shift_sell_rule_1_battery_above')|float(-1), states('number.amber_smart_shift_sell_rule_1_min_price')|float(999)),
+  (is_state('switch.amber_smart_shift_enable_sell_rule_2','on'), states('number.amber_smart_shift_sell_rule_2_battery_above')|float(-1), states('number.amber_smart_shift_sell_rule_2_min_price')|float(999)),
+  (is_state('switch.amber_smart_shift_enable_sell_rule_3','on'), states('number.amber_smart_shift_sell_rule_3_battery_above')|float(-1), states('number.amber_smart_shift_sell_rule_3_min_price')|float(999)),
+] %}
+{% set sr = namespace(batt=none, price=none, any_enabled=false) %}
+{% for enabled, batt, pr in sell_rules %}
+  {% if enabled %}{% set sr.any_enabled = true %}{% endif %}
+  {% if enabled and soc > batt and (sr.batt is none or batt > sr.batt) %}
+    {% set sr.batt = batt %}{% set sr.price = pr %}
+  {% endif %}
+{% endfor %}
+{% set sell_selected = sr.batt is not none %}
+{% set sell_active = sell_selected and sell >= sr.price %}
+
+{# Buy rule selection - mirrors auto_buy.yaml (lowest satisfied wins) #}
+{% set buy_rules = [
+  (is_state('switch.amber_smart_shift_enable_buy_rule_1','on'), states('number.amber_smart_shift_buy_rule_1_battery_below')|float(101), states('number.amber_smart_shift_buy_rule_1_max_price')|float(-999)),
+  (is_state('switch.amber_smart_shift_enable_buy_rule_2','on'), states('number.amber_smart_shift_buy_rule_2_battery_below')|float(101), states('number.amber_smart_shift_buy_rule_2_max_price')|float(-999)),
+  (is_state('switch.amber_smart_shift_enable_buy_rule_3','on'), states('number.amber_smart_shift_buy_rule_3_battery_below')|float(101), states('number.amber_smart_shift_buy_rule_3_max_price')|float(-999)),
+] %}
+{% set br = namespace(batt=none, price=none, any_enabled=false) %}
+{% for enabled, batt, pr in buy_rules %}
+  {% if enabled %}{% set br.any_enabled = true %}{% endif %}
+  {% if enabled and soc < batt and (br.batt is none or batt < br.batt) %}
+    {% set br.batt = batt %}{% set br.price = pr %}
+  {% endif %}
+{% endfor %}
+{% set buy_selected = br.batt is not none %}
+{% set buy_active = buy_selected and buy <= br.price %}
+
+{% set en_ss_off = is_state('switch.amber_smart_shift_auto_disable_smart_shift_when_idle', 'on') %}
+{% set ss_on = is_state('switch.amber_smart_shift_enable_smart_shift', 'on') %}
+{% set active_ss_off = en_ss_off and not ss_on and manual == 'none' %}
+
+{%- set amber_text -%}
+**💲 Amber**
+&nbsp;&nbsp;Buy **{{ price(buy) }}** &nbsp;&nbsp; Sell **{{ price(sell) }}** &nbsp;&nbsp; Battery **{{ '⚠️ offline' if not online else (soc | round(0) | int ~ '%') }}**
+&nbsp;&nbsp;Import **${{ '%.2f' | format(states(P ~ 'current_import_cost') | float(0) / 100) }}** &nbsp;&nbsp; Export **${{ '%.2f' | format((states(P ~ 'current_export_earnings') | float(0) / 100) | abs) }}** &nbsp;&nbsp; 💸 Expense **${{ '%.2f' | format((net / 100) | abs) }}**
+&nbsp;&nbsp;Last price poll **{{ polled if polled in ['unknown','unavailable'] else (polled | as_timestamp | timestamp_custom('%I:%M %p')) }}**
+{%- endset -%}
+
+{# -------------------------------------------------------
+   Everything below is built as: each SECTION is captured as
+   a string (either via {% set x %}...{% endset %} for text
+   with embedded {{ }} substitutions, like amber_text above,
+   or via a namespace + list-append + join for a variable
+   number of conditionally-visible rows, like power/auto
+   below). All the sections that exist are collected into one
+   list and joined with a literal blank line between them.
+
+   This is deliberately NOT built from literal text lines
+   mixed with {% if %}/{% endif %} tags wrapping them, even
+   with whitespace-control dashes. That was tried first and
+   failed two different ways: without dashes, every tag-only
+   line left a blank line behind; with dashes on both sides
+   of every tag, adjacent tags each ate the newline the OTHER
+   side needed, collapsing every row onto one line. Neither
+   dash placement can satisfy "no gap between two shown
+   rows" and "no gap when a row is hidden" at the same time
+   once literal text lines sit between the tags - trimming
+   only controls whitespace immediately touching a tag, not
+   whether a row exists at all. Building each section as a
+   plain string and joining once, after every conditional has
+   already been resolved, sidesteps the problem rather than
+   trying to win the whitespace fight tag-by-tag.
+   ------------------------------------------------------- #}
+{%- macro fmt(w) -%}
+{%- set a = w | abs -%}
+{{ (a/1000) | round(2) ~ ' kW' if a >= 1000 else a | round(0) | int ~ ' W' }}
+{%- endmacro -%}
+
+{%- set batt_id = states('text.amber_smart_shift_power_battery_sensor') -%}
+{%- set batt_lvl_id = states('text.amber_smart_shift_power_battery_level_sensor') -%}
+{%- set solar_id = states('text.amber_smart_shift_power_solar_sensor') -%}
+{%- set load_id = states('text.amber_smart_shift_power_load_sensor') -%}
+{%- set grid_id = states('text.amber_smart_shift_power_grid_sensor') -%}
+
+{%- set has_battery = batt_id not in ['', 'unknown', 'unavailable'] -%}
+{%- set has_solar = solar_id not in ['', 'unknown', 'unavailable'] -%}
+{%- set has_load = load_id not in ['', 'unknown', 'unavailable'] -%}
+{%- set has_grid = grid_id not in ['', 'unknown', 'unavailable'] -%}
+
+{%- set power = namespace(items=[]) -%}
+{%- if has_battery -%}
+  {%- set battery_w = states(batt_id) | float(0) -%}
+  {%- if batt_lvl_id not in ['', 'unknown', 'unavailable'] -%}
+    {%- set power_soc = states(batt_lvl_id) | float(0) -%}
+  {%- else -%}
+    {%- set power_soc = soc -%}
+  {%- endif -%}
+  {%- if battery_w < 0 -%}
+    {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Charging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
+  {%- elif battery_w > 0 -%}
+    {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Discharging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
+  {%- else -%}
+    {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Idle - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if has_solar -%}
+  {%- set power.items = power.items + ['&nbsp;&nbsp;☀️ Solar **' ~ fmt(states(solar_id) | float(0)) ~ '**'] -%}
+{%- endif -%}
+{%- if has_load -%}
+  {%- set power.items = power.items + ['&nbsp;&nbsp;🏠 Load **' ~ fmt(states(load_id) | float(0)) ~ '**'] -%}
+{%- endif -%}
+{%- if has_grid -%}
+  {%- set grid_w = states(grid_id) | float(0) -%}
+  {%- if grid_w > 5 -%}
+    {%- set power.items = power.items + ['&nbsp;&nbsp;⚡ Grid Consuming **' ~ fmt(grid_w) ~ '**'] -%}
+  {%- elif grid_w < -5 -%}
+    {%- set power.items = power.items + ['&nbsp;&nbsp;⚡ Grid Feed-in **' ~ fmt(grid_w) ~ '**'] -%}
+  {%- else -%}
+    {%- set power.items = power.items + ['&nbsp;&nbsp;⚡ Grid ~0W'] -%}
+  {%- endif -%}
+{%- endif -%}
+
+{%- set auto = namespace(items=[]) -%}
+{%- if not sr.any_enabled -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🚫 Auto Sell'] -%}
+{%- elif sell_active -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Sell — Battery > ' ~ (sr.batt | round(0) | int) ~ '%, selling at ' ~ price(sell)] -%}
+{%- elif sell_selected -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell — Battery > ' ~ (sr.batt | round(0) | int) ~ '%, selling when price >= ' ~ price(sr.price)] -%}
+{%- else -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell'] -%}
+{%- endif -%}
+{%- if not br.any_enabled -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🚫 Auto Buy'] -%}
+{%- elif buy_active -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Buy — Battery < ' ~ (br.batt | round(0) | int) ~ '%, buying at ' ~ price(buy)] -%}
+{%- elif buy_selected -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy — Battery < ' ~ (br.batt | round(0) | int) ~ '%, buying when price <= ' ~ price(br.price)] -%}
+{%- else -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy'] -%}
+{%- endif -%}
+{%- set auto.items = auto.items + ['&nbsp;&nbsp;' ~ ('🟢' if active_ss_off else ('🔴' if en_ss_off else '🚫')) ~ ' Auto Disable Smart Shift When Idle'] -%}
+{%- if manual not in ['none', 'unknown', 'unavailable'] -%}
+  {%- set action_icon = {'charge': '🔋⬆️', 'discharge': '🔋⬇️', 'preserve-charge': '🔒', 'self-consume': '🏠'}.get(manual, '⚡') -%}
+  {%- set action_label = {'charge': 'Currently Charging', 'discharge': 'Currently Discharging', 'preserve-charge': 'Currently Preserving', 'self-consume': 'Currently Self Consuming'}.get(manual, 'Manual Action Active') -%}
+  {%- set ends = states('sensor.amber_smart_shift_manual_action_ends') -%}
+  {%- set remaining_text = namespace(value='') -%}
+  {%- if ends not in ['unknown', 'unavailable', 'none', None] -%}
+    {%- set remaining = (as_timestamp(ends) - as_timestamp(now())) | int -%}
+    {%- if remaining > 0 -%}
+      {%- set hh = remaining // 3600 -%}
+      {%- set mm = (remaining % 3600) // 60 -%}
+      {%- if hh > 0 -%}
+        {%- set hh_text = (hh | string) ~ ' hour' ~ ('s' if hh != 1 else '') -%}
+        {%- if mm > 0 -%}
+          {%- set duration_text = hh_text ~ ' ' ~ mm ~ ' minute' ~ ('s' if mm != 1 else '') -%}
+        {%- else -%}
+          {%- set duration_text = hh_text -%}
+        {%- endif -%}
+      {%- elif remaining >= 60 -%}
+        {%- set duration_text = (mm | string) ~ ' minute' ~ ('s' if mm != 1 else '') -%}
+      {%- else -%}
+        {%- set duration_text = 'less than a minute' -%}
+      {%- endif -%}
+      {%- set remaining_text.value = ' — ends in ' ~ duration_text -%}
+    {%- endif -%}
+  {%- endif -%}
+  {%- set auto.items = auto.items + ['&nbsp;&nbsp;' ~ action_icon ~ ' ' ~ action_label ~ remaining_text.value] -%}
+{%- endif -%}
+
+{%- set sections = namespace(parts=[amber_text]) -%}
+{%- if power.items -%}
+  {%- set sections.parts = sections.parts + ['**⚡ Power**\n' ~ (power.items | join('\n'))] -%}
+{%- endif -%}
+{%- set sections.parts = sections.parts + ['**🤖 Automations**\n' ~ (auto.items | join('\n'))] -%}
+{{ sections.parts | join('\n\n') }}

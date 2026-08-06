@@ -1,0 +1,10 @@
+- id: amber_fallback_self_consumption
+  alias: Amber Auto Smart Shift Off
+  description: Auto-generated from the fallback_self_consumption.yaml blueprint by install.sh. Edit the inputs via the automation editor UI, or delete and re-run install.sh to reset to defaults.
+  use_blueprint:
+    path: amber/fallback_self_consumption.yaml
+    input:
+      enable_switch: switch.amber_smart_shift_auto_disable_smart_shift_when_idle
+      current_override_sensor: sensor.amber_smart_shift_current_manual_action
+      smart_shift_switch: switch.amber_smart_shift_enable_smart_shift
+      battery_connection: binary_sensor.amber_smart_shift_battery_connection

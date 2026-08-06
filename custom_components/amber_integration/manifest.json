@@ -1,14 +1,16 @@
 {
   "domain": "amber_integration",
-  "name": "Home Assistant Custom Amber Electric Integration",
-  "version": "1.1.26",
-  "documentation": "https://github.com/kane81/Home Assistant Custom Amber Electric Integration",
-  "issue_tracker": "https://github.com/kane81/Home Assistant Custom Amber Electric Integration/issues",
+  "name": "HA Custom Amber Electric Integration",
+  "version": "2.0.0",
+  "config_flow": true,
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "documentation": "https://github.com/kane81/hacs-custom-amber-integration",
+  "issue_tracker": "https://github.com/kane81/hacs-custom-amber-integration/issues",
   "codeowners": [
     "@kane81"
   ],
   "requirements": [
     "pycognito"
-  ],
-  "iot_class": "cloud_polling"
+  ]
 }

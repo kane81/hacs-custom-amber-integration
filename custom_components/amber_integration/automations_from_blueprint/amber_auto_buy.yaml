@@ -1,0 +1,23 @@
+- id: amber_auto_buy
+  alias: Amber Auto Buy
+  description: Auto-generated from the auto_buy.yaml blueprint by install.sh. Edit the inputs via the automation editor UI, or delete and re-run install.sh to reset to defaults.
+  use_blueprint:
+    path: amber/auto_buy.yaml
+    input:
+      buy_price_sensor: sensor.amber_smart_shift_buy_price
+      battery_sensor: sensor.amber_smart_shift_battery_level
+      battery_connection: binary_sensor.amber_smart_shift_battery_connection
+      current_override_sensor: sensor.amber_smart_shift_current_manual_action
+      price_poll_sensor: sensor.amber_smart_shift_last_price_poll
+      stats_poll_sensor: sensor.amber_smart_shift_last_stats_poll
+      rule_1_enable: switch.amber_smart_shift_enable_buy_rule_1
+      rule_1_battery: number.amber_smart_shift_buy_rule_1_battery_below
+      rule_1_price: number.amber_smart_shift_buy_rule_1_max_price
+      rule_2_enable: switch.amber_smart_shift_enable_buy_rule_2
+      rule_2_battery: number.amber_smart_shift_buy_rule_2_battery_below
+      rule_2_price: number.amber_smart_shift_buy_rule_2_max_price
+      rule_3_enable: switch.amber_smart_shift_enable_buy_rule_3
+      rule_3_battery: number.amber_smart_shift_buy_rule_3_battery_below
+      rule_3_price: number.amber_smart_shift_buy_rule_3_max_price
+      override_duration: 60
+      notify: true

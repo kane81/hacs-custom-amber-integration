@@ -1,418 +1,343 @@
 <p align="center"><img src="https://raw.githubusercontent.com/kane81/hacs-custom-amber-integration/main/custom_components/amber_integration/brand/icon.png" width="80" alt="icon"/></p>
 
-# Home Assistant Custom Amber Electric Integration
+# HA Custom Amber Electric Integration
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/kane81)
+Control your home battery from Home Assistant using [Amber Electric](https://www.amber.com.au/)'s Smart Shift API — live prices, manual charge/discharge, and optional price-triggered automations.
 
+> **This is not the official Amber Electric integration.** Home Assistant's built-in integration provides price sensors only and cannot control a battery. This project uses the same private API as the Amber mobile app, which is where battery control is implemented.
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub release](https://img.shields.io/github/release/kane81/hacs-custom-amber-integration.svg)](https://github.com/kane81/hacs-custom-amber-integration/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.amber_integration.total)](https://analytics.home-assistant.io)
-
-> A Home Assistant custom integration for **[Amber Electric](https://www.amber.com.au/)** that automates battery charging, discharging and solar export based on real-time electricity prices via the Smart Shift API.
-
-> **Battery agnostic** — works with any battery enrolled in Amber Smart Shift. The integration controls the battery via the Amber API, not directly, so no local battery connection is required.
-
-> ☀️ **Have a GoodWe solar inverter?** Add automatic solar curtailment when prices are negative with the companion project: [hacs-goodwe-sems-curtailment](https://github.com/kane81/hacs-goodwe-sems-curtailment)
-
-📐 [Click here to view the Architecture Diagram](images/architecture.png)
+☀️ Have a GoodWe solar inverter? Add automatic solar curtailment when prices are negative with the companion project: [hacs-goodwe-sems-curtailment](https://github.com/kane81/hacs-goodwe-sems-curtailment)
 
 ---
 
+## How It Works
 
-## Features
+The integration authenticates with your Amber email and password, the same credentials used by the mobile app. Every control action it exposes — charge, discharge, preserve, self-consume, or Smart Shift on/off — sends Amber the same instruction the app would send.
 
-| Feature | Description |
-|---|---|
-| **Price polling** | Fetches live Amber buy/sell prices every 5 minutes |
-| **Force Export** | Discharges battery to grid when sell price exceeds your threshold |
-| **Grid Charging** | Charges battery from grid when buy price goes negative |
-| **Block Smart Shift** | Disables Smart Shift overnight to preserve battery for next day |
-| **Price Notifications** | Alerts when buy price goes negative and when it recovers |
-| **Battery Offline Detection** | Detects when Amber cannot communicate with the battery — notifies once when offline and again when restored. Shows a warning on the dashboard card. |
-
-All optional automations are **off by default** — enable them individually via the dashboard card or Overview → Devices → Helpers once you are confident the integration is working correctly.
+📐 [Click here to view the Architecture Diagram](https://github.com/kane81/hacs-custom-amber-integration/blob/main/images/architecture.png)
 
 ---
 
+## What You Get
 
-## ⚠️ Disclaimer
+### Part 1 — The Integration (required)
 
-This project uses Amber Electric's internal API which is not publicly documented or officially supported. Amber may change or remove it at any time without notice. This project has no affiliation with Amber Electric. Use at your own risk — battery control actions directly affect your energy system and electricity costs. The author accepts no responsibility for energy costs, battery damage, or system issues.
+Live prices and battery telemetry as sensors, plus manual controls: charge, discharge, preserve, self-consume, and a Smart Shift on/off switch. Configured entirely through the Home Assistant UI with an Amber account login.
 
-### New to Home Assistant?
+### Part 2 — Automations and Dashboard (optional)
 
-If you are new to editing Home Assistant configuration files it is strongly recommended to test in a virtual machine before making changes to your live installation.
+Three ready-made automations installed as blueprints, plus a dashboard. Trades automatically on price, with up to three battery-level rules per direction.
 
-**[Setting up Home Assistant in a Virtual Machine](https://www.youtube.com/watch?v=GDlUzAsEO30)**
-
-When configuring the VM network adapter use **Bridged Adapter** and **Paravirtualized Network (virtio-net)** — without this, downloads inside the VM can hang for 20+ minutes.
-
----
-
-
-## ⚠️ Prerequisites
-
-- Active **Amber Electric** subscription with Smart Shift enabled
-- **Smart Shift compatible battery** enrolled in the Amber app
-- **Home Assistant OS, Supervised, or Docker** with HACS installed
-- `pycognito` Python library — installed automatically by HA via `manifest.json`
-- Basic familiarity with Home Assistant
-
-### Have on hand before starting
-
-Have these ready to copy and paste during the install:
-
-| What | Where to get it |
-|---|---|
-| **Amber login email** | Your Amber Electric account email |
-| **Amber password** | Your Amber Electric account password |
-| **HA Long-Lived Access Token** | In HA: click your **Profile avatar** (bottom left) → **Long-Lived Access Tokens** → **Create Token** → give it a name → copy the token |
-| **Email address** *(optional)* | Your email address for notifications |
-| **SMTP server** *(optional)* | e.g. `smtp.gmail.com` for Gmail, `smtp.office365.com` for Outlook. Press Enter during install to default to Gmail. |
-| **SMTP password** *(optional)* | For Gmail: [create an App Password](https://myaccount.google.com/apppasswords) (requires 2FA enabled). For other providers check your email settings. |
+|                      | Part 1                           | Part 2                        |
+| -------------------- | --------------------------------- | ------------------------------ |
+| **What it is**       | A normal HA integration          | Blueprints + a dashboard file |
+| **Install via**      | HACS → restart → Add Integration | One shell command             |
+| **You need**         | Amber email + password           | Nothing extra                 |
+| **Required?**        | Yes                               | No — Part 1 works standalone  |
+| **Optional extras**  | Battery Level, Battery Power, Solar Power, Home Load Power and Grid Power sensors, for the dashboard's Power card | — |
 
 ---
 
+## Requirements
 
-## Installation
-
-### Step 1 — Install Prerequisites
-
-#### Install HACS (if not already installed)
-
-HACS (Home Assistant Community Store) is required to install this integration. If it is already in your sidebar, skip ahead to Step 1b.
-
-**Home Assistant OS / Supervised:**
-1. Go to **Settings → Apps → Install Apps**
-2. Click **⋮** (top right) → **Custom repositories**
-3. Paste: `https://github.com/hacs/addons` → Category: **Add-on** → **Add**
-4. Search for **HACS** → **Install**
-5. Go to the **Info** tab → **Start** → **Restart Home Assistant** when prompted
-6. After restart go to **Settings → Devices & Services → Add Integration**
-7. Search for **HACS** → follow the setup steps (requires a GitHub account)
-8. Once configured, **HACS** will appear in your left sidebar
-
-**Docker container (no supervisor access):**
-
-First find your container name by running on the host:
-```bash
-docker ps
-```
-Look for the Home Assistant container — in this example it is called `homeassistant`.
-
-Then run:
-```bash
-docker exec -it homeassistant bash
-wget -O - https://get.hacs.xyz | bash
-```
-Then restart Home Assistant and complete the HACS setup via **Settings → Devices & Services → Add Integration → HACS**.
-
-#### Step 1b — Terminal Access
-
-You need terminal access to run the install script.
-
-**Home Assistant OS / Supervised:** Install the **Advanced SSH & Web Terminal** add-on:
-1. Go to **Settings → Apps → Install Apps**
-2. Search for `Advanced SSH & Web Terminal` → **Install**
-3. Go to the **Info** tab → **Start**
-4. Toggle **Show in sidebar** to on
-
-**Docker container:** Terminal access is not via the add-on. You will run commands directly on the host.
+- An **Amber Electric** account with **Smart Shift** enabled
+- A **Smart Shift compatible battery**, already working in the Amber app
+- **Home Assistant 2024.4** or newer, with [HACS](https://hacs.xyz/) installed
+- A **terminal client** — Advanced SSH & Web Terminal add-on, or `docker exec` — required for Part 2's `install.sh` and the standalone script
+- *Optional* — Battery Level, Battery Power, Solar Power, Home Load Power and Grid Power sensors, to populate the dashboard's Power card. See [Power sensors](#power-sensors) in the appendix for details.
 
 ---
 
-### Step 2 — Install Custom Amber Project
+## Part 1 — Install the Integration
 
-Click the button below to add the repository to HACS:
+### 1. Add the repository to HACS
 
 [![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kane81&repository=hacs-custom-amber-integration&category=integration)
 
-Or add manually:
-1. Open **HACS** in your HA sidebar
-2. Click **⋮** (top right) → **Custom repositories**
-3. Paste: `https://github.com/kane81/hacs-custom-amber-integration`
-4. Category: **Integration** → **Add**
-5. Search for **hacs-custom-amber-integration** → **Download**
+Or manually: **HACS** → **⋮** → **Custom repositories** → paste `https://github.com/kane81/hacs-custom-amber-integration` → Category **Integration** → **Add**.
 
-HACS downloads the integration into `/config/custom_components/amber_integration/`.
+### 2. Download it
 
-**Run the install script:**
+In HACS, find *HA Custom Amber Electric Integration* and click *Download*.
 
-*HA OS / Supervised* — open **Advanced SSH & Web Terminal** from the sidebar:
-```bash
+This copies files to `/config/custom_components/amber_integration/`. Nothing is active yet.
+
+### 3. Restart Home Assistant
+
+**Settings → System → Restart**
+
+Required — Home Assistant only discovers newly downloaded integrations on startup.
+
+### 4. Add the integration and sign in
+
+**Settings → Devices & Services → + Add Integration** → search **Amber**
+
+> ⚠️ **Two results will appear.** Select *HA Custom Amber Electric Integration* — identified by the **Custom** badge. The other result is Home Assistant's built-in Amber Electric integration, which provides pricing data only.
+
+Enter the email and password used for the Amber mobile app. The site and battery are detected automatically.
+
+#### Power sensors (optional step)
+
+The **Power sensors** screen configures the dashboard's Power card to reference existing solar, load, and grid sensors. The integration receives battery data through Amber's API only; it has no visibility into other inverter or metering data.
+
+![Power sensors step](images/power_sensors_step.png)
+
+All fields are optional. Click **Submit** to skip this step, or complete only the fields available. Fields can be configured later from the integration's Configuration page.
+
+On completion, a device named **Amber Smart Shift** is created, containing every entity and service this integration provides. See the [Entities](#entities) appendix for the complete list, including notes on units and sign conventions.
+
+<p align="center">
+  <img src="images/part1_controls.png" width="320" alt="Controls" />
+  &nbsp;&nbsp;
+  <img src="images/part1_sensors.png" width="320" alt="Sensors" />
+</p>
+
+---
+
+## Part 2 — Automations and Dashboard (optional)
+
+Part 1 must be installed and signed in first.
+
+### Install
+
+From **Advanced SSH & Web Terminal**, or `docker exec -it homeassistant bash`:
+
+```
 bash /config/custom_components/amber_integration/install.sh
 ```
-> 💡 **Terminal tip:** To paste use **Right Click → Paste**. Do not use Ctrl+V — it will not work in the HA terminal.
 
-*Docker* — from a host terminal, get an interactive shell then run the script:
-```bash
-docker ps                          # find your container name e.g. homeassistant
-docker exec -it homeassistant bash
-bash /config/custom_components/amber_integration/install.sh
-```
-> 💡 In a Docker terminal you can use **Ctrl+V** to paste normally.
+The installer installs the blueprints and creates automations from them, using Part 1's entities. It prompts for automatic or manual dashboard installation, and removes files from earlier versions of this project if present.
 
+**Everything is installed switched off.** Each automation checks its own enable switch before acting, so nothing affects the battery until enabled.
 
-The script will walk you through the following steps:
+### The dashboard
 
-**1. Credentials**
+![Dashboard status and Buy/Sell rules](images/part2_dashboard.png)
 
-You will be prompted for your credentials — have these ready before running:
-- Your HA Long-Lived Access Token — get it from your **profile avatar** (bottom left) → **Long-Lived Access Tokens** → **Create Token** → copy it immediately
-- Your Amber Electric login email and password
+The status panel reports what each automation is doing:
 
 ```
-🔑 Checking credentials in secrets.yaml...
-
-   Enter Amber Electric login email: you@example.com
-   ✅ amber_email saved to secrets.yaml
-
-   Enter Amber Electric login password: ••••••••
-   ✅ amber_password saved to secrets.yaml
-
-   Enter HA Long-Lived Access Token: eyJ...
-   ✅ ha_long_lived_token saved to secrets.yaml
+🤖 Automations
+  🟢 Auto Sell — Battery > 80%, selling at 42c
+  🔴 Auto Buy — Battery < 60%, buying when price <= 7c
+  🚫 Auto Disable Smart Shift When Idle
 ```
 
-**2. Email notifications (optional)**
+🟢 acting now · 🔴 enabled, waiting for the price · 🚫 no rules enabled
 
-```
-📧 Email Notifications (optional)
-   Notifications go to the HA bell by default.
-   To also receive email alerts enter your SMTP details.
+Each Sell and Buy rule has its own card below the status panel, showing its battery threshold, price threshold, and enable switch — the same values described in [How the rules work](#how-the-rules-work), editable directly from the dashboard. An optional **Power** card appears once at least one Power sensor is configured.
 
-   Set up email notifications now? (y/N): 
-```
+**Auto-installed dashboards cannot be edited in the UI.** `install.sh` registers it as a `mode: yaml` dashboard, which Home Assistant deliberately makes read-only in the frontend — no edit pencil, no drag-and-drop, no raw config editor. Changes require editing `/config/lovelace/amber.yaml` directly and reloading. Re-running `install.sh` overwrites it with the shipped version, including any manual edits.
 
-Answer **y** if you want email alerts, or press Enter to skip — you can add this later via the **Email Notifications** section below.
+### The three automations
 
-**3. Configuration and defaults**
+**Auto Sell** discharges to the grid when the price is high enough. **Auto Buy** charges from the grid when the price is low enough. **Auto Disable Smart Shift When Idle** turns Smart Shift off whenever neither is running, preventing Amber's own plan from dispatching the battery independently, and restores it when the automation is disabled.
 
-The script automatically updates `configuration.yaml`, reloads HA YAML and sets default helper values. No action required — just wait for it to complete.
+### How the rules work
 
-**4. Dashboard card**
+Auto Sell and Auto Buy each have **three independent rules** — no time windows, on/off only, applied by battery level:
 
-The script automatically creates `lovelace/amber.yaml` with the dashboard card pre-configured, and adds the lovelace dashboard entry to `configuration.yaml`. After restarting HA, an **Amber** dashboard will appear in your sidebar ready to use.
+|             | Battery   | Only sell at/above |
+| ----------- | --------- | ------------------- |
+| Sell Rule 1 | above 80% | 15c                  |
+| Sell Rule 2 | above 50% | 20c                  |
+| Sell Rule 3 | above 0%  | 80c                  |
 
-**5. Verify completion**
+The fuller the battery, the lower the price required to sell. Buy mirrors this — the emptier the battery, the higher the price accepted:
 
-The output should end with:
-```
-✅ Install complete!
-```
+|            | Battery   | Only buy at/below |
+| ---------- | --------- | ------------------- |
+| Buy Rule 1 | below 30% | 15c                  |
+| Buy Rule 2 | below 60% | 7c                   |
+| Buy Rule 3 | below 90% | 1c                   |
 
-> **After this first run** the `amber_hacs_auto_install` automation handles all future HACS updates automatically.
+**Rule order is not significant.** At 90% battery, every Sell rule's condition is technically satisfied, so the automation selects the **most specific** one — the highest `battery above` threshold still met. Buy uses the lowest `battery below`. This is a comparison of values, not a sequential check, so rule placement does not affect behaviour. Disabled rules are skipped. Rules can be enabled or adjusted under **Settings → Devices & Services → HA Custom Amber Electric Integration →** the device **→ Configuration**, or via the same switches on the dashboard above.
 
-> **On every HA restart** the automation runs a lightweight sync (copies files only) — no prompts, no pip installs. Your settings are never touched.
+### Manually adding the card
 
-> **To re-run the full installer** at any time (e.g. to set up email, reconfigure credentials, or re-add the dashboard card):
-> ```bash
-> bash /config/custom_components/amber_integration/install.sh
-> ```
+Building the dashboard manually allows full customisation in the HA Dashboard UI editor — cards can be reordered, restyled, or supplemented with additional controls. The trade-off is the absence of the live price summary and countdown timer, which rely on a Jinja template the Entities/Tile card types cannot reproduce.
+
+**Setup:**
+
+1. **Settings → Dashboards → + Add Dashboard** → *New dashboard from scratch* → provide a name
+2. Open it → **Edit Dashboard**
+3. Rename the first section to *Status*. Add a card → **Markdown**, and paste in the content from [`status_card.txt`](custom_components/amber_integration/status_card.txt) → **Save**
+
+**Status section — add these as Tile cards, in order:**
+
+| Entity | Tile name | Settings |
+| --- | --- | --- |
+| `button.amber_smart_shift_force_refresh` | Refresh Now | Hide entity state; Layout: Full width |
+| `switch.amber_smart_shift_enable_smart_shift` | Smart Shift | Layout: Full width |
+| *(heading card)* | Manual Controls | — |
+| `switch.amber_smart_shift_manual_charge` | Manual Charge | Layout: Full width |
+| `switch.amber_smart_shift_manual_discharge` | Manual Discharge | Layout: Full width |
+| `switch.amber_smart_shift_manual_preserve` | Manual Preserve | Layout: Full width |
+| `switch.amber_smart_shift_manual_self_consumption` | Manual Self Consumption | Layout: Full width |
+| `number.amber_smart_shift_manual_toggle_duration` | Run For | Features → Add Feature → Numeric Input → style Slider; Layout: Full width |
+
+**Automations section — add a second section (same as step 3, without the Markdown card), then add these as Tile cards:**
+
+| Entity | Tile name | Settings |
+| --- | --- | --- |
+| `switch.amber_smart_shift_auto_disable_smart_shift_when_idle` | Auto Disable Smart Shift When Idle | Layout: Full width |
+| *(heading card)* | Sell Rule 1 | — |
+| `switch.amber_smart_shift_enable_sell_rule_1` | Enable | Layout: Full width |
+| `number.amber_smart_shift_sell_rule_1_battery_above` | Battery Above | — |
+| `number.amber_smart_shift_sell_rule_1_min_price` | Min Sell Price | — |
+| *(heading card)* | Sell Rule 2 | — |
+| `switch.amber_smart_shift_enable_sell_rule_2` | Enable | Layout: Full width |
+| `number.amber_smart_shift_sell_rule_2_battery_above` | Battery Above | — |
+| `number.amber_smart_shift_sell_rule_2_min_price` | Min Sell Price | — |
+| *(heading card)* | Sell Rule 3 | — |
+| `switch.amber_smart_shift_enable_sell_rule_3` | Enable | Layout: Full width |
+| `number.amber_smart_shift_sell_rule_3_battery_above` | Battery Above | — |
+| `number.amber_smart_shift_sell_rule_3_min_price` | Min Sell Price | — |
+| *(heading card)* | Buy Rule 1 | — |
+| `switch.amber_smart_shift_enable_buy_rule_1` | Enable | Layout: Full width |
+| `number.amber_smart_shift_buy_rule_1_battery_below` | Battery Below | — |
+| `number.amber_smart_shift_buy_rule_1_max_price` | Max Buy Price | — |
+| *(heading card)* | Buy Rule 2 | — |
+| `switch.amber_smart_shift_enable_buy_rule_2` | Enable | Layout: Full width |
+| `number.amber_smart_shift_buy_rule_2_battery_below` | Battery Below | — |
+| `number.amber_smart_shift_buy_rule_2_max_price` | Max Buy Price | — |
+| *(heading card)* | Buy Rule 3 | — |
+| `switch.amber_smart_shift_enable_buy_rule_3` | Enable | Layout: Full width |
+| `number.amber_smart_shift_buy_rule_3_battery_below` | Battery Below | — |
+| `number.amber_smart_shift_buy_rule_3_max_price` | Max Buy Price | — |
+
+The two Number tiles per rule are left at default width so they sit side by side; only the Enable switch uses Full width. This matches the auto-installed dashboard's layout and naming exactly. `custom_components/amber_integration/dashboard_card.txt` contains the complete entity list as a plain checklist, for reference in place of the tables above.
 
 ---
 
-## Using the Dashboard Card
+## Troubleshooting
 
-![Dashboard Card](images/dashboard_card.jpeg)
+**The integration doesn't appear in Add Integration** — Home Assistant was not restarted after downloading from HACS, or the download failed. Check that `/config/custom_components/amber_integration/manifest.json` exists.
 
-If you opted to install the dashboard during setup, there will be an **Amber** dashboard in your sidebar. Click on it to see your controls. Click **Poll Amber Prices Now** to load the current info from Amber — data will be at default settings until the first poll runs.
+**"Entity not found" on the dashboard** — The dashboard version does not match the installed integration version. Update via HACS, re-run `install.sh`, and restart.
 
-If you did not opt to auto install, see the manual instructions below.
+**An automation isn't doing anything** — Confirm its enable switch is on. Check the dashboard status line: 🔴 indicates the automation is enabled but the price has not met the configured threshold, which is expected behaviour.
 
----
+**Battery shows offline** — `binary_sensor.…_battery_connection` reflects Amber's own reported status. If Amber cannot reach the battery, this integration cannot either — check the Amber app first.
 
-### Manually Adding the Card
+**Smart Shift turned itself back on unexpectedly** — Any override re-enables Smart Shift if it was off, including Auto Buy/Auto Sell acting on their own price rules, not only a manual toggle. If Auto Disable Smart Shift When Idle had just turned it off and Auto Buy's conditions became true shortly after, this is expected — charging on a satisfied rule takes priority over remaining idle. Check `sensor.…_current_manual_action`'s `source` attribute to identify what applied it.
 
-> **Note:** Recent HA versions only support Entities cards on Overview — Markdown cards require a custom dashboard. Create one first: **Settings → Dashboards → Add Dashboard → New dashboard from scratch**.
-
-The install script creates a new **Amber** dashboard and adds the card automatically — answer **Y** when prompted. To add it manually or to a different dashboard:
-
-1. Go to your dashboard → click **⋮** → **Edit dashboard**
-2. Click **+ Add Card** → search for and select **Markdown**
-3. Copy the card template from [`custom_components/amber_integration/dashboard_card.txt`](custom_components/amber_integration/dashboard_card.txt) and paste into the Content field
-4. Click **Save**
-
-To add automation toggles and config controls to the same dashboard, add an **Entities** card for each group in the **Configuring the Amber Integration Using the Dashboard Card** section below.
-
-Add toggle and number controls directly to your dashboard so you can control automations and adjust settings without navigating to Helpers. The automations in **Settings → Automations** should always remain enabled — control is via the **Enable Automation** toggles. When OFF, the automation runs but exits immediately without doing anything.
-
-For each group below, add an **Entities** card and include the listed entities.
-
-> **Tip:** You can adjust the width of entity cards in edit mode — click the card → drag the resize handle, or use **Layout** options to set columns.
-
-
----
-
-Below explains the automations and configuration options of the Custom Amber Integration.
-
-**Price Poller**
-- `Amber Price Poller` — polls every 5 minutes and 30 seconds to get actual pricing rather than an estimate
-
----
-
-**Block Smart Shift** — disables Smart Shift overnight to preserve battery charge for peak periods
-- `Enable Automation: Block Smart Shift`
-- `Amber Block Smart Shift Start`
-- `Amber Block Smart Shift End`
-
----
-
-**Force Export** — discharges battery to grid when sell price is at or above your threshold
-- `Enable Automation: Force Export`
-- `Amber Min Sell Price` — minimum sell price to trigger export
-- `Amber Min SOC to Sell` — minimum battery % before stopping export
-- `Amber Force Sell Start`
-- `Amber Force Sell End`
-
----
-
-**Force Charge** — charges battery from grid when buy price is at or below your threshold; cancels override at max SOC returning to self-consumption
-- `Enable Automation: Force Charge`
-- `Amber Max Buy Price` — maximum buy price to trigger charging
-- `Amber Max SOC to Charge` — stop charging at this battery %
-- `Amber Force Charge Start`
-- `Amber Force Charge End`
-
----
-
-**Notifications**
-- `Enable Automation: Force Export Notifications` — notifications when force export starts, stops or fails
-- `Enable Automation: Negative Price Notify` — notification when buy price goes negative
-
----
-
-#### ⚠️ Note on the Automation Editor
-
-When you open an automation from **Settings → Automations** you may see a warning that the automation was created outside the UI and cannot be edited here. This is expected — automations stored in YAML files under `/config/automations/` appear as read-only in the GUI. Leave them as-is.
-
----
-
-
-
-
-
-## Manual Commands
-
-These can be run from **Advanced SSH & Web Terminal** (HA OS/Supervised) or inside the container (`docker exec -it homeassistant bash`) at any time:
-
-```bash
-python3 /config/scripts/amber_graphql.py status        # battery status and active overrides
-python3 /config/scripts/amber_graphql.py live          # poll prices now
-python3 /config/scripts/amber_graphql.py discharge 30  # force discharge for 30 minutes
-python3 /config/scripts/amber_graphql.py charge 60     # force charge for 60 minutes
-python3 /config/scripts/amber_graphql.py cancel        # cancel any active override
-python3 /config/scripts/amber_graphql.py smartshift_on
-python3 /config/scripts/amber_graphql.py smartshift_off
-python3 /config/scripts/amber_auth.py                  # manually refresh auth token
-```
-
-## Email Notifications
-
-By default all notifications go to the HA notification bell (🔔) in the top right of the UI. You can optionally have them emailed to you as well.
-
-**What you will need:**
-- Your email address
-- Your email password or app password — Gmail requires an [App Password](https://myaccount.google.com/apppasswords) if you have 2FA enabled
-
-> You can always add this later — notifications will continue going to the HA bell in the meantime.
-
-### Set up during install (recommended)
-
-Answer **y** when the install script asks about email notifications — it will prompt for your credentials, update `secrets.yaml`, automatically uncomment the SMTP block in `amber.yaml` and reload HA YAML. No manual steps needed.
-
-### Set up manually
-
-**Step 1 — Add credentials to secrets.yaml**
-
-Open `/config/secrets.yaml` in an editor and add:
-
-```yaml
-smtp_username: "your@gmail.com"
-smtp_password: "your-app-password"
-```
-
-**Step 2 — Uncomment the email notify block in amber.yaml**
-
-Open `/config/packages/amber.yaml` and uncomment the SMTP section near the bottom:
-
-```yaml
-  - name: amber_smtp
-    platform: smtp
-    server: smtp.gmail.com
-    port: 587
-    timeout: 15
-    sender: !secret smtp_username
-    encryption: starttls
-    username: !secret smtp_username
-    password: !secret smtp_password
-    recipient:
-      - "your@gmail.com"
-    sender_name: "Home Assistant - Amber"
-```
-
-**Step 3 — Add amber_smtp to the notification group**
-
-In the same file find the `notify:` group and add `amber_smtp`:
-
-```yaml
-notify:
-  - name: notification
-    platform: group
-    services:
-      - service: persistent_notification
-      - service: amber_smtp   # ← add this line
-```
-
-**Step 4 — Reload YAML**
-
-**Developer Tools → YAML → Reload All**
-
-> If you ran the full install script after making these changes it reloads automatically — no manual reload needed.
-
-All future notifications will now go to both the HA bell and your email.
+**Custom sensors are slow to update** — A lagging Power card reflects the poll rate of the source sensor integration, not this one. Check **Settings → Devices & Services → [the relevant battery/inverter integration] → ⚙️** and reduce its refresh interval.
 
 ---
 
 ## Uninstalling
 
-Removing this integration via HACS only deletes the `custom_components` folder — automation files, packages, scripts and helpers are left behind. To fully remove everything run the uninstall script first:
+**Part 2 only:**
 
-```bash
+```
 bash /config/custom_components/amber_integration/uninstall.sh
 ```
 
-Then remove from HACS and restart HA.
+Removes the blueprints, their automations, and the dashboard. Rules and thresholds are preserved, as they are entities on the integration itself.
 
-## Troubleshooting
-
-**Automations not appearing** — re-run the install script: `bash /config/custom_components/amber_integration/install.sh`. Confirm `automation: !include_dir_merge_list automations/` is in `configuration.yaml`, then restart HA.
-
-**Auth fails on startup** — check `amber_email` and `amber_password` in `secrets.yaml`. Run `python3 /config/scripts/amber_auth.py` in Terminal to see the exact error.
-
-**Prices not updating** — check the `Amber Price Poller` automation trace in Settings → Automations. Run `python3 /config/scripts/amber_graphql.py live` to test manually.
-
-**Optional automation not firing** — confirm its enable toggle is ON in Overview → Devices → Helpers. Check the automation trace — the condition block shows exactly why it exited early.
-
-**notify.notification unknown action error** — the package hasn't loaded yet. Reload: Developer Tools → YAML → Reload All.
-
-**After any change to configuration.yaml** — Developer Tools → YAML → Reload All (or restart HA).
+**Part 1:** Settings → Devices & Services → *HA Custom Amber Electric Integration* → ⋮ → **Delete**, then remove the repository from HACS.
 
 ---
 
-## License
+## Appendix
 
-MIT — see [LICENSE](LICENSE) file. Note the disclaimer above regarding the undocumented Amber API.
+### Entities
 
-## Contributing
+#### Live data
 
-Issues and PRs welcome. Contributions should include testing against the current Amber app to verify API compatibility.
+| Entity                                           | What it is                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------ |
+| `sensor.…_buy_price`                             | Current general usage price ($/kWh)                                |
+| `sensor.…_sell_price`                            | Current feed-in price ($/kWh) — negative means exporting incurs a cost |
+| `sensor.…_battery_level`                         | Battery charge (%)                                                 |
+| `sensor.…_battery_power`                         | Battery power (W) — negative while charging                        |
+| `sensor.…_battery_capacity`                      | Total usable battery capacity (Wh) — from Amber, not a live reading; effectively static |
+| `sensor.…_current_import_cost`                   | Import cost this 5-minute interval (¢)                             |
+| `sensor.…_current_export_earnings`               | Export earnings this interval (¢)                                  |
+| `sensor.…_current_net_earnings`                  | Net for this interval (¢)                                          |
+| `sensor.…_market_state`                          | Amber's own description of current battery activity                |
+| `binary_sensor.…_battery_connection`             | Off when Amber cannot reach the battery                            |
+| `sensor.…_last_price_poll` / `…_last_stats_poll` | Timestamp of the last successful poll                              |
+
+#### Manual control
+
+| Entity                             | What it does                                                                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `switch.…_manual_charge`           | Charge from the grid                                                                                                           |
+| `switch.…_manual_discharge`        | Discharge to the grid                                                                                                          |
+| `switch.…_manual_preserve`         | Hold current charge                                                                                                            |
+| `switch.…_manual_self_consumption` | Solar charges, house load discharges, Smart Shift stays out of it                                                              |
+| `number.…_manual_toggle_duration`  | Duration of the next toggle (5 min – 4 hours)                                                                                  |
+| `switch.…_enable_smart_shift`      | Amber's own Smart Shift optimisation, on/off                                                                                   |
+| `button.…_force_refresh`           | Polls immediately                                                                                                              |
+| `sensor.…_current_manual_action`   | Which override is running, or `none`. Has a `source` attribute identifying what applied it (`manual`, `auto_sell`, `auto_buy`, `service`) |
+| `sensor.…_manual_action_ends`      | Expiry time — renders as a live countdown                                                                                      |
+| `binary_sensor.…_manual_action`    | On while any override is running                                                                                               |
+
+The four manual switches are mutually exclusive — only one override can exist on Amber's side, so enabling one disables the others immediately, and disabling the active one cancels it. **Enabling one also re-enables Smart Shift if it was off** — Amber silently ignores overrides while Smart Shift is disabled, so this behaviour is deliberate rather than a control that has no effect.
+
+#### Automation settings
+
+These entities have no effect until Part 2 is installed. They exist in Part 1 because a blueprint cannot create its own helpers. Located under **Configuration** on the device page.
+
+| Entity                                        | What it is                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------ |
+| `switch.…_enable_sell_rule_1` … `_3`          | Enables each Sell rule                                            |
+| `number.…_sell_rule_N_battery_above`          | Rule applies when battery is above this level                     |
+| `number.…_sell_rule_N_min_price`              | Minimum sell price for the rule to apply                          |
+| `switch.…_enable_buy_rule_1` … `_3`           | Enables each Buy rule                                             |
+| `number.…_buy_rule_N_battery_below`           | Rule applies when battery is below this level                     |
+| `number.…_buy_rule_N_max_price`               | Maximum buy price for the rule to apply                           |
+| `switch.…_auto_disable_smart_shift_when_idle` | Disables Smart Shift whenever no other automation is active       |
+
+#### Power sensors
+
+`text.…_power_battery_sensor`, `text.…_power_battery_level_sensor`, `text.…_power_solar_sensor`, `text.…_power_load_sensor`, `text.…_power_grid_sensor` — configured on the Power sensors step during setup, or at any time afterward under Configuration.
+
+- **Units are assumed to be Watts.** Values above 1000 W display as kW on the dashboard, but no unit conversion is performed — a sensor already reporting in kW will display incorrectly.
+- **An incorrect entity ID does not raise an error** — it is read as 0, so a row persistently showing "0 W" should be checked for a typo before being assumed faulty.
+- **Sign conventions apply.** These follow the same polarity as this project's own SEMS integration: negative battery power indicates charging, positive grid power indicates importing. If the configured sensors use the opposite convention, the values remain correct but the labels will read inverted.
+- The Power card appears only once at least one reading is configured, and each row displays only if its corresponding sensor is set.
+
+### Skip the script — install automations manually
+
+`install.sh` performs two tasks: installing the automations and installing the dashboard. Skipping the dashboard installation is covered in [Manually adding the card](#manually-adding-the-card). This section covers the automations, so Part 2 can be configured entirely without the script or a terminal.
+
+1. Import each blueprint below (**Settings → Automations & Scenes → Blueprints tab → Import Blueprint** → paste URL → **Preview** → **Import**)
+2. Select **Create Automation** next to each imported blueprint, then **Save** — every input defaults to the matching Part 1 entity, so no changes are required unless multiple Amber integration instances are configured
+3. Build the dashboard — see [Manually adding the card](#manually-adding-the-card) above
+
+| Blueprint | Import URL |
+| --- | --- |
+| Auto Sell | `https://github.com/kane81/hacs-custom-amber-integration/blob/main/blueprints/automation/amber/auto_sell.yaml` |
+| Auto Buy | `https://github.com/kane81/hacs-custom-amber-integration/blob/main/blueprints/automation/amber/auto_buy.yaml` |
+| Auto Disable Smart Shift When Idle | `https://github.com/kane81/hacs-custom-amber-integration/blob/main/blueprints/automation/amber/fallback_self_consumption.yaml` |
+
+### Adjusting poll intervals
+
+**Settings → Devices & Services** → the **HA Custom Amber Electric Integration** card → **⚙️ Configure**
+
+> This is on the *integration card* in the main list, not the device page.
+
+|                                | Default | Minimum | Covers                                |
+| ------------------------------- | ------- | ------- | ---------------------------------------- |
+| **Statistics Poll Interval**   | 30s     | 15s     | Battery level, power, override status |
+| **Market Price Poll Interval** | 5m 30s  | 30s     | Buy/sell price, interval earnings     |
+
+Two independent schedules are used. Amber publishes prices every 5 minutes, so more frequent polling provides no benefit for pricing data; battery telemetry updates near real-time and uses its own faster schedule. At the default interval, price polling is aligned to the wall clock (:00:30, :05:30, and so on) rather than a fixed offset from startup.
 
 ---
 
 ## Credits
 
-- **[Official Amber Electric Integration](https://www.home-assistant.io/integrations/amberelectric/)** — the official HA integration this project complements
-- Thanks to **hudakh**, **chrismalec87**, 6minchinbury, **Jacob Kairl** and the rest of the beta testers for their invaluable feedback and testing.
+- Official [Amber Electric Integration](https://www.home-assistant.io/integrations/amberelectric/)
+- Thanks to hudakh, chrismalec87, 6minchinbury, Jacob Kairl, Jai Nankivell, Mark Purcell, 18107 and the beta testers
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## Contributing
+
+Issues and pull requests welcome at [github.com/kane81/hacs-custom-amber-integration](https://github.com/kane81/hacs-custom-amber-integration).

@@ -10,23 +10,22 @@
 #     (so they show up in Settings > Automations > Blueprints automatically -
 #     no manual "Import a blueprint" URL paste needed)
 #
-#   - four ready-to-go AUTOMATIONS, each using one of those blueprints with
+#   - three ready-to-go AUTOMATIONS, each using one of those blueprints with
 #     Part 1's actual entity IDs already filled in -> /config/automations/
 #     (so there is nothing left to click through in the UI either - they
 #     exist and are visible in Settings > Automations the moment you restart)
 #
 #   - the dashboard -> /config/lovelace/amber.yaml (optional, asks first)
 #
-# All four automations are created but INERT. Each blueprint checks its own
+# All three automations are created but INERT. Each blueprint checks its own
 # "Enable ..." switch as a condition, and every one of those switches
 # defaults to off, so nothing moves your battery until you turn one on
 # yourself under Configuration on the device page.
 #
-# There is no login here, no token, no secrets.yaml, no package system. This
-# script cannot restart Home Assistant for you - triggering a restart from
-# inside the same SSH session that is running this script kills the
-# connection mid-command, which is worse than just telling you to do it
-# yourself afterwards.
+# There is no login here, no token, no secrets.yaml, no package system. The
+# script restarts Home Assistant for you at the end via `ha core restart`
+# (Home Assistant OS / Supervised only - see the note near the bottom of
+# this file for the plain-container fallback).
 #
 # Usage:
 #   bash /config/custom_components/amber_integration/install.sh

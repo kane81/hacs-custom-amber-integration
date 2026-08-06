@@ -1,0 +1,164 @@
+{
+  "entity": {
+    "sensor": {
+      "buy_price": {
+        "default": "mdi:transmission-tower-export"
+      },
+      "sell_price": {
+        "default": "mdi:transmission-tower-import"
+      },
+      "battery_soc": {
+        "default": "mdi:battery"
+      },
+      "battery_power": {
+        "default": "mdi:flash"
+      },
+      "import_cost": {
+        "default": "mdi:cash-minus"
+      },
+      "export_earnings": {
+        "default": "mdi:cash-plus"
+      },
+      "total_earnings": {
+        "default": "mdi:cash"
+      },
+      "market_state": {
+        "default": "mdi:battery-sync"
+      },
+      "current_manual_action": {
+        "default": "mdi:hand-back-right"
+      },
+      "manual_action_ends": {
+        "default": "mdi:timer-sand"
+      },
+      "last_stats_poll": {
+        "default": "mdi:cloud-clock"
+      },
+      "last_price_poll": {
+        "default": "mdi:cloud-clock"
+      }
+    },
+    "binary_sensor": {
+      "battery_connection": {
+        "default": "mdi:battery-alert",
+        "state": {
+          "on": "mdi:battery-check"
+        }
+      },
+      "manual_action": {
+        "default": "mdi:hand-back-right"
+      }
+    },
+    "switch": {
+      "smartshift": {
+        "default": "mdi:auto-fix"
+      },
+      "manual_discharge": {
+        "default": "mdi:battery-arrow-down"
+      },
+      "manual_charge": {
+        "default": "mdi:battery-arrow-up"
+      },
+      "manual_preserve": {
+        "default": "mdi:battery-lock"
+      },
+      "manual_self_consumption": {
+        "default": "mdi:home-battery"
+      },
+      "enable_sell_rule_1": {
+        "default": "mdi:transmission-tower-export"
+      },
+      "enable_sell_rule_2": {
+        "default": "mdi:transmission-tower-export"
+      },
+      "enable_sell_rule_3": {
+        "default": "mdi:transmission-tower-export"
+      },
+      "enable_buy_rule_1": {
+        "default": "mdi:battery-charging-high"
+      },
+      "enable_buy_rule_2": {
+        "default": "mdi:battery-charging-high"
+      },
+      "enable_buy_rule_3": {
+        "default": "mdi:battery-charging-high"
+      },
+      "enable_auto_smart_shift_off": {
+        "default": "mdi:weather-night"
+      }
+    },
+    "number": {
+      "manual_toggle_duration": {
+        "default": "mdi:progress-clock"
+      },
+      "sell_rule_1_battery": {
+        "default": "mdi:battery-high"
+      },
+      "sell_rule_1_price": {
+        "default": "mdi:cash-plus"
+      },
+      "sell_rule_2_battery": {
+        "default": "mdi:battery-70"
+      },
+      "sell_rule_2_price": {
+        "default": "mdi:cash-plus"
+      },
+      "sell_rule_3_battery": {
+        "default": "mdi:battery-low"
+      },
+      "sell_rule_3_price": {
+        "default": "mdi:cash-plus"
+      },
+      "buy_rule_1_battery": {
+        "default": "mdi:battery-low"
+      },
+      "buy_rule_1_price": {
+        "default": "mdi:cash-minus"
+      },
+      "buy_rule_2_battery": {
+        "default": "mdi:battery-70"
+      },
+      "buy_rule_2_price": {
+        "default": "mdi:cash-minus"
+      },
+      "buy_rule_3_battery": {
+        "default": "mdi:battery-high"
+      },
+      "buy_rule_3_price": {
+        "default": "mdi:cash-minus"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "default": "mdi:refresh"
+      }
+    },
+    "text": {
+      "power_battery_sensor": {
+        "default": "mdi:battery-sync"
+      },
+      "power_battery_level_sensor": {
+        "default": "mdi:battery-heart-variant"
+      },
+      "power_solar_sensor": {
+        "default": "mdi:solar-power"
+      },
+      "power_load_sensor": {
+        "default": "mdi:home-lightning-bolt"
+      },
+      "power_grid_sensor": {
+        "default": "mdi:transmission-tower"
+      }
+    }
+  },
+  "services": {
+    "force_charge": "mdi:battery-arrow-up",
+    "force_discharge": "mdi:battery-arrow-down",
+    "preserve_charge": "mdi:battery-lock",
+    "consume": "mdi:home-battery",
+    "cancel_override": "mdi:cancel",
+    "smartshift_on": "mdi:auto-fix",
+    "smartshift_off": "mdi:weather-night",
+    "refresh": "mdi:refresh"
+  }
+}

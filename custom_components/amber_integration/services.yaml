@@ -1,0 +1,143 @@
+force_charge:
+  name: Force charge
+  description: >
+    Charge the battery from the grid. Skips the API call if the same override
+    is already running with more than 7 minutes left.
+  fields:
+    duration:
+      name: Duration
+      description: How long to hold the override, in minutes.
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+    source:
+      name: Source
+      description: >
+        Identifies the caller ("manual", "auto_buy", "auto_sell", ...). Used
+        to track ownership of the active override, so the auto_sell/auto_buy
+        automation blueprints only ever cancel an override they applied
+        themselves - not one from a manual toggle or from each other.
+        Defaults to "service" if not set.
+      default: service
+      selector:
+        text:
+
+force_discharge:
+  name: Force discharge
+  description: >
+    Discharge the battery to the grid. Skips the API call if the same override
+    is already running with more than 7 minutes left.
+  fields:
+    duration:
+      name: Duration
+      description: How long to hold the override, in minutes.
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+    source:
+      name: Source
+      description: >
+        Identifies the caller ("manual", "auto_buy", "auto_sell", ...). Used
+        to track ownership of the active override, so the auto_sell/auto_buy
+        automation blueprints only ever cancel an override they applied
+        themselves - not one from a manual toggle or from each other.
+        Defaults to "service" if not set.
+      default: service
+      selector:
+        text:
+
+preserve_charge:
+  name: Preserve charge
+  description: Hold the current charge, neither charging nor discharging.
+  fields:
+    duration:
+      name: Duration
+      description: How long to hold the override, in minutes.
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+    source:
+      name: Source
+      description: >
+        Identifies the caller ("manual", "auto_buy", "auto_sell", ...). Used
+        to track ownership of the active override, so the auto_sell/auto_buy
+        automation blueprints only ever cancel an override they applied
+        themselves - not one from a manual toggle or from each other.
+        Defaults to "service" if not set.
+      default: service
+      selector:
+        text:
+
+consume:
+  name: Self consumption
+  description: Hold the battery in self consumption, neither charging nor discharging from the grid.
+  fields:
+    duration:
+      name: Duration
+      description: How long to hold the override, in minutes.
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+    source:
+      name: Source
+      description: >
+        Identifies the caller ("manual", "auto_buy", "auto_sell", ...). Used
+        to track ownership of the active override, so the auto_sell/auto_buy
+        automation blueprints only ever cancel an override they applied
+        themselves - not one from a manual toggle or from each other.
+        Defaults to "service" if not set.
+      default: service
+      selector:
+        text:
+
+cancel_override:
+  name: Cancel override
+  description: Cancel any active battery override and return control to Smart Shift.
+
+smartshift_on:
+  name: Enable Smart Shift
+  description: Enable Amber Smart Shift optimisation. Required for overrides to take effect.
+  fields:
+    source:
+      name: Source
+      description: >
+        Identifies the caller ("manual", "auto_disable_smart_shift_when_idle",
+        ...). The Auto Disable Smart Shift When Idle blueprint uses this to
+        tell "I turned Smart Shift off, so I should be the one to turn it
+        back on" apart from "Smart Shift happens to be off for some other
+        reason" - it only re-enables Smart Shift if it was the one that
+        disabled it. Defaults to "service" if not set.
+      default: service
+      selector:
+        text:
+
+smartshift_off:
+  name: Disable Smart Shift
+  description: >
+    Disable Amber Smart Shift optimisation, so the Smart Shift plan stops
+    dispatching the battery.
+  fields:
+    source:
+      name: Source
+      description: >
+        Identifies the caller. See smartshift_on for what this is used for.
+        Defaults to "service" if not set.
+      default: service
+      selector:
+        text:
+
+refresh:
+  name: Refresh
+  description: Poll Amber immediately instead of waiting for the next update.
