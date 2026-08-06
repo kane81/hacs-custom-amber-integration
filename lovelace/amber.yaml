@@ -133,17 +133,29 @@ views:
               {%- set hh = total_seconds // 3600 -%}
               {%- set mm = (total_seconds % 3600) // 60 -%}
               {%- if hh > 0 -%}
-                {%- set hh_text = (hh | string) ~ ' hour' ~ ('s' if hh != 1 else '') -%}
                 {%- if mm > 0 -%}
-                  {{ hh_text }} {{ mm }} minute{{ 's' if mm != 1 else '' }}
+                  {{ hh }}h {{ mm }}m
                 {%- else -%}
-                  {{ hh_text }}
+                  {{ hh }}h
                 {%- endif -%}
               {%- elif total_seconds >= 60 -%}
-                {{ mm }} minute{{ 's' if mm != 1 else '' }}
+                {{ mm }}m
               {%- else -%}
-                less than a minute
+                <1m
               {%- endif -%}
+              {%- endmacro -%}
+
+              {# Compact clock time for mobile - e.g. "8:11pm" not "08:11 PM".
+                 %I is zero-padded with no portable, cross-platform strftime
+                 directive to suppress that (%-I is a glibc/Linux-only
+                 extension), so this formats normally first and then strips
+                 the leading zero, space and uppercase in Jinja itself -
+                 works the same regardless of the underlying platform's
+                 strftime implementation. Only ever strips a genuine leading
+                 "0" (hours 01-09), so 12:00pm/12:00am are left alone. #}
+              {%- macro fmt_time_short(unix_ts) -%}
+              {%- set raw = unix_ts | timestamp_custom('%I:%M %p') -%}
+              {{ (raw[1:] if raw.startswith('0') else raw) | replace(' ', '') | lower }}
               {%- endmacro -%}
 
               {%- set batt_id = states('text.amber_smart_shift_power_battery_sensor') -%}
@@ -173,7 +185,7 @@ views:
                     {%- set remaining_wh = battery_capacity_wh * (100 - power_soc) / 100 -%}
                     {%- set eta_seconds = (remaining_wh / charge_rate_w * 3600) | int -%}
                     {%- set eta_unix = as_timestamp(now()) + eta_seconds -%}
-                    {%- set power.items = power.items + ['&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;full in ' ~ fmt_duration(eta_seconds) ~ ' — approx ' ~ (eta_unix | timestamp_custom('%I:%M %p'))] -%}
+                    {%- set power.items = power.items + ['&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;full in ' ~ fmt_duration(eta_seconds) ~ ' — approx ' ~ fmt_time_short(eta_unix)] -%}
                   {%- endif -%}
                 {%- elif battery_w > 0 -%}
                   {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Discharging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
@@ -202,18 +214,18 @@ views:
               {%- if not sr.any_enabled -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🚫 Auto Sell'] -%}
               {%- elif sell_active -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Sell — Battery > ' ~ (sr.batt | round(0) | int) ~ '%, selling at ' ~ price(sell)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Sell — 🔋> ' ~ (sr.batt | round(0) | int) ~ '%, selling at ' ~ price(sell)] -%}
               {%- elif sell_selected -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell — Battery > ' ~ (sr.batt | round(0) | int) ~ '%, selling when price >= ' ~ price(sr.price)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell — 🔋> ' ~ (sr.batt | round(0) | int) ~ '%, sell price >= ' ~ price(sr.price)] -%}
               {%- else -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Sell'] -%}
               {%- endif -%}
               {%- if not br.any_enabled -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🚫 Auto Buy'] -%}
               {%- elif buy_active -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Buy — Battery < ' ~ (br.batt | round(0) | int) ~ '%, buying at ' ~ price(buy)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🟢 Auto Buy — 🔋< ' ~ (br.batt | round(0) | int) ~ '%, buying at ' ~ price(buy)] -%}
               {%- elif buy_selected -%}
-                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy — Battery < ' ~ (br.batt | round(0) | int) ~ '%, buying when price <= ' ~ price(br.price)] -%}
+                {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy — 🔋< ' ~ (br.batt | round(0) | int) ~ '%, buy price <= ' ~ price(br.price)] -%}
               {%- else -%}
                 {%- set auto.items = auto.items + ['&nbsp;&nbsp;🔴 Auto Buy'] -%}
               {%- endif -%}
