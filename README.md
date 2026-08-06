@@ -129,7 +129,7 @@ The status panel reports what each automation is doing:
 
 🟢 acting now · 🔴 enabled, waiting for the price · 🚫 no rules enabled
 
-Each Sell and Buy rule has its own card below the status panel, showing its battery threshold, price threshold, and enable switch — the same values described in [How the rules work](#how-the-rules-work), editable directly from the dashboard. An optional **Power** card appears once at least one Power sensor is configured, and shows an estimated time to full while charging, based on the live charge rate and Battery Capacity.
+Each Sell and Buy rule has its own card below the status panel, showing its battery threshold, price threshold, and enable switch — the same values described in [How the rules work](#how-the-rules-work), editable directly from the dashboard. An optional **Power** card appears once at least one Power sensor is configured, and shows an estimated time and clock time to full while charging (e.g. "full in 3 hours 54 minutes — approx 07:49 AM"), based on the live charge rate and Battery Capacity.
 
 **Auto-installed dashboards cannot be edited in the UI.** `install.sh` registers it as a `mode: yaml` dashboard, which Home Assistant deliberately makes read-only in the frontend — no edit pencil, no drag-and-drop, no raw config editor. Changes require editing `/config/lovelace/amber.yaml` directly and reloading. Re-running `install.sh` overwrites it with the shipped version, including any manual edits.
 

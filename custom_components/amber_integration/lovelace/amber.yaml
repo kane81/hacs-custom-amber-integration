@@ -166,15 +166,15 @@ views:
                   {%- set power_soc = soc -%}
                 {%- endif -%}
                 {%- if battery_w < 0 -%}
-                  {%- set charge_line = '&nbsp;&nbsp;🔋 Battery — Charging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%' -%}
+                  {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Charging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
                   {%- set battery_capacity_wh = states('sensor.amber_smart_shift_battery_capacity') | float(0) -%}
                   {%- set charge_rate_w = battery_w | abs -%}
                   {%- if battery_capacity_wh > 0 and charge_rate_w > 10 and power_soc < 100 -%}
                     {%- set remaining_wh = battery_capacity_wh * (100 - power_soc) / 100 -%}
                     {%- set eta_seconds = (remaining_wh / charge_rate_w * 3600) | int -%}
-                    {%- set charge_line = charge_line ~ ' - full in ' ~ fmt_duration(eta_seconds) -%}
+                    {%- set eta_unix = as_timestamp(now()) + eta_seconds -%}
+                    {%- set power.items = power.items + ['&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;full in ' ~ fmt_duration(eta_seconds) ~ ' — approx ' ~ (eta_unix | timestamp_custom('%I:%M %p'))] -%}
                   {%- endif -%}
-                  {%- set power.items = power.items + [charge_line] -%}
                 {%- elif battery_w > 0 -%}
                   {%- set power.items = power.items + ['&nbsp;&nbsp;🔋 Battery — Discharging **' ~ fmt(battery_w) ~ '** - ' ~ (power_soc | round(0) | int) ~ '%'] -%}
                 {%- else -%}
