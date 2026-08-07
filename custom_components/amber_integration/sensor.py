@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -23,34 +23,10 @@ from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .api import parse_amber_timestamp
 from .const import DOMAIN
 from .coordinator import AmberRuntimeData
 from .entity import AmberCoordinatorType, AmberEntity
-
-
-def _parse_ts(value: Any) -> datetime | None:
-    """Parse Amber's UTC timestamp format.
-
-    Tries the exact format seen on validTo first (with milliseconds), then
-    falls back to fromisoformat for anything else - estimatedEndDate is a
-    different field with no confirmed trace showing its exact format, so
-    this is intentionally more tolerant than a single strptime pattern.
-    """
-    if not value:
-        return None
-    try:
-        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.000Z").replace(
-            tzinfo=timezone.utc
-        )
-    except (ValueError, TypeError):
-        pass
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return parsed
-    except (ValueError, TypeError):
-        return None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -162,7 +138,7 @@ STATS_SENSORS: tuple[AmberSensorDescription, ...] = (
         name="Manual Action Ends",
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:timer-sand",
-        value_fn=lambda d: _parse_ts(d.get("override_ends")),
+        value_fn=lambda d: parse_amber_timestamp(d.get("override_ends")),
     ),
 )
 

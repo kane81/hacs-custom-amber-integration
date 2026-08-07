@@ -37,6 +37,31 @@ class AmberApiError(Exception):
     """Raised when the Amber API returns an error."""
 
 
+def parse_amber_timestamp(value: Any) -> datetime | None:
+    """Parse Amber's UTC timestamp format.
+
+    Tries the exact format seen on validTo first (with milliseconds), then
+    falls back to fromisoformat for anything else - estimatedEndDate is a
+    different field with no confirmed trace showing its exact format, so
+    this is intentionally more tolerant than a single strptime pattern.
+    """
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.000Z").replace(
+            tzinfo=timezone.utc
+        )
+    except (ValueError, TypeError):
+        pass
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
+    except (ValueError, TypeError):
+        return None
+
+
 # -----------------------------------------------------------------------------
 # GraphQL documents
 # -----------------------------------------------------------------------------
@@ -422,13 +447,12 @@ class AmberApi:
 
         current = stats.get("override_value")
         if current == value and stats.get("override_ends"):
-            try:
-                ends = datetime.strptime(
-                    stats["override_ends"], "%Y-%m-%dT%H:%M:%S.000Z"
-                ).replace(tzinfo=timezone.utc)
-                remaining = (ends - datetime.now(timezone.utc)).total_seconds() / 60
-            except (ValueError, TypeError):
-                remaining = 0
+            ends = parse_amber_timestamp(stats["override_ends"])
+            remaining = (
+                (ends - datetime.now(timezone.utc)).total_seconds() / 60
+                if ends is not None
+                else 0
+            )
 
             if remaining >= OVERRIDE_CONTINUITY_MINUTES:
                 _LOGGER.debug(
