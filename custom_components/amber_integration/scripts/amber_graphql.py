@@ -614,7 +614,7 @@ query SmartShiftPlanCli($siteId: String, $env: String) {
                 estimatedEndDate
                 isEvOverride
             }
-            duringControlSummary
+            duringControlSummary { __typename }
         }
     }
 }
@@ -859,7 +859,8 @@ def main() -> None:
             if cur:
                 tag = "" if cur["estimate"] else "  (live)"
                 print(f"Now: {cur['kwhPriceInCents']:.0f}c/kWh{tag}  "
-                      f"[{cur['indicator']}]  renewable {cur['renewablePercentage']}%")
+                      f"[{cur['indicator']} / DMO: {cur['indicatorAgainstDmo']}]  "
+                      f"renewable {cur['renewablePercentage']}%")
             else:
                 print("Now: unavailable")
 
@@ -871,12 +872,14 @@ def main() -> None:
                 print("Forecast (30-min):")
                 for pd in side["forecast"]:
                     print(f"  {pd['start'][11:16]}  {pd['kwhPriceInCents']:5.0f}c/kWh  "
-                          f"[{pd['indicator']:<9}]  renewable {pd['renewablePercentage']}%" +
+                          f"[{pd['indicator']:<9}/ DMO: {pd['indicatorAgainstDmo']:<9}]  "
+                          f"renewable {pd['renewablePercentage']}%" +
                           ("  DEMAND WINDOW" if pd.get("demandWindow") else ""))
             if side["previous"]:
                 print("Recent (30-min, most recent first):")
                 for pd in side["previous"]:
-                    print(f"  {pd['start'][11:16]}  {pd['kwhPriceInCents']:5.0f}c/kWh  [{pd['indicator']}]")
+                    print(f"  {pd['start'][11:16]}  {pd['kwhPriceInCents']:5.0f}c/kWh  "
+                          f"[{pd['indicator']} / DMO: {pd['indicatorAgainstDmo']}]")
 
         remarks = [r for r in p["remarks"].values() if r]
         if remarks:
