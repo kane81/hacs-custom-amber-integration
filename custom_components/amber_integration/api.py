@@ -252,6 +252,19 @@ class AmberApi:
 
         return body["data"]
 
+    async def async_graphql(
+        self, hass_executor, query: str, variables: dict | None = None
+    ) -> dict[str, Any]:
+        """Public entry point for authenticated GraphQL calls.
+
+        Exists so companion integrations that depend on this one (e.g. the
+        Amber Price Timeline add-on) can reuse this client's cached Cognito
+        token and connection instead of authenticating separately - one
+        login/password, not several. Companion integrations own their own
+        query text and response parsing; this only handles auth + transport.
+        """
+        return await self._async_graphql(hass_executor, query, variables)
+
     # -- discovery ---------------------------------------------------------
 
     async def async_discover_site(self, hass_executor) -> tuple[str, str]:
